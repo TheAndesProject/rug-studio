@@ -85,7 +85,7 @@ The prompt must place the rug in a beautiful, aspirational living room setting â
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 400,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
@@ -219,7 +219,7 @@ The prompt must place the rug in a beautiful, aspirational living room setting â
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 400,
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
