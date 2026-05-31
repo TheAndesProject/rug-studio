@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Your Custom Rug — The Andes Project</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --tostado:#8B6F47;
+  --cream:#F5F0E8;
+  --charcoal:#2C2C2A;
+  --natural:#D4C4A0;
+}
+body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--charcoal);min-height:100vh}
+
+.app{max-width:900px;margin:0 auto;padding:0 0 4rem}
+
+.header{text-align:center;padding:2.5rem 1rem 1.5rem;border-bottom:1px solid rgba(139,111,71,0.2)}
+.header h1{font-family:'Cormorant Garamond',serif;font-size:2.2rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--charcoal)}
+.header p{font-size:0.78rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--tostado);margin-top:0.4rem}
+
+.steps-nav{display:flex;border-bottom:1px solid rgba(139,111,71,0.2);background:#F9F5EE}
+.step-tab{flex:1;padding:1rem 0.5rem;text-align:center;cursor:pointer;font-size:0.68rem;letter-spacing:0.2em;text-transform:uppercase;color:#888;border-bottom:2px solid transparent;transition:all 0.25s;background:none;border-top:none;border-left:none;border-right:none;font-family:'Jost',sans-serif}
+.step-tab.active{color:var(--tostado);border-bottom-color:var(--tostado)}
+.step-tab .step-num{display:block;font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:500;color:inherit;margin-bottom:2px}
+
+.step-panel{display:none;padding:1.5rem 1.5rem}
+.step-panel.active{display:block}
+
+.section-label{font-size:0.68rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--tostado);margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+.section-label::after{content:'';flex:1;height:1px;background:rgba(139,111,71,0.25)}
+
+.size-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem}
+.size-card{border:1px solid rgba(139,111,71,0.3);border-radius:4px;padding:1rem 0.8rem;text-align:center;cursor:pointer;transition:all 0.2s;background:#fff;position:relative}
+.size-card:hover{border-color:var(--tostado)}
+.size-card.selected{border-color:var(--tostado);background:#FBF7F1;box-shadow:inset 0 0 0 1px var(--tostado)}
+.size-card .sz-name{font-size:0.72rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:500;color:var(--charcoal)}
+.size-card .sz-dims{font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--tostado);margin:4px 0}
+.size-card .sz-price{font-size:0.72rem;color:#888}
+.size-card .sz-badge{position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--tostado);color:#fff;font-size:0.58rem;letter-spacing:0.15em;padding:2px 8px;border-radius:10px;text-transform:uppercase;white-space:nowrap}
+
+.custom-size{background:#fff;border:1px dashed rgba(139,111,71,0.4);border-radius:4px;padding:1rem;margin-bottom:1.5rem}
+.custom-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end;margin-top:0.75rem}
+.field-label{font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:#888;margin-bottom:4px}
+.field-label-main{font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--charcoal);font-weight:500}
+input[type=number],select{width:100%;padding:8px 10px;border:1px solid rgba(139,111,71,0.35);border-radius:3px;font-family:'Jost',sans-serif;font-size:0.85rem;background:#fff;color:var(--charcoal);outline:none}
+input[type=number]:focus,select:focus{border-color:var(--tostado)}
+.toggle-custom{background:none;border:none;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--tostado);cursor:pointer;font-family:'Jost',sans-serif;text-decoration:underline;padding:0}
+
+.texture-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem}
+.texture-card{border:1px solid rgba(139,111,71,0.3);border-radius:4px;padding:1.2rem 1rem;text-align:center;cursor:pointer;transition:all 0.2s;background:#fff}
+.texture-card:hover{border-color:var(--tostado)}
+.texture-card.selected{border-color:var(--tostado);background:#FBF7F1;box-shadow:inset 0 0 0 1px var(--tostado)}
+.texture-icon{width:60px;height:40px;margin:0 auto 0.6rem;display:block}
+.texture-name{font-size:0.72rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:500;color:var(--charcoal)}
+.texture-desc{font-size:0.7rem;color:#888;margin-top:3px}
+
+.pattern-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem}
+.pattern-card{border:1px solid rgba(139,111,71,0.3);border-radius:4px;padding:0.8rem 0.6rem;text-align:center;cursor:pointer;transition:all 0.2s;background:#fff}
+.pattern-card:hover{border-color:var(--tostado)}
+.pattern-card.selected{border-color:var(--tostado);background:#FBF7F1;box-shadow:inset 0 0 0 1px var(--tostado)}
+.pattern-preview{width:80px;height:50px;margin:0 auto 0.5rem;border-radius:3px;overflow:hidden}
+.pattern-name{font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--charcoal)}
+
+.color-palette{display:grid;grid-template-columns:repeat(7,1fr);gap:10px 8px;margin-bottom:1rem}
+.swatch-wrap{display:flex;flex-direction:column;align-items:center}
+.color-swatch{width:46px;height:46px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all 0.15s;position:relative;flex-shrink:0}
+.color-swatch:hover{transform:scale(1.1)}
+.color-swatch.selected{border-color:var(--charcoal);transform:scale(1.06)}
+.color-swatch .color-check{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;opacity:0;transition:opacity 0.15s;text-shadow:0 1px 3px rgba(0,0,0,0.7);z-index:2}
+.color-swatch.selected .color-check{opacity:1}
+.color-swatch .color-num{position:absolute;bottom:1px;right:1px;background:rgba(0,0,0,0.55);color:#fff;font-size:0.52rem;font-weight:600;line-height:1;padding:2px 3px;border-radius:3px;letter-spacing:0;font-family:'Jost',sans-serif}
+.color-name{font-size:0.6rem;letter-spacing:0.05em;text-transform:uppercase;color:#888;text-align:center;margin-top:4px;width:50px;word-break:break-word;line-height:1.2}
+
+.selected-colors{background:#fff;border:1px solid rgba(139,111,71,0.3);border-radius:4px;padding:0.9rem 1rem;margin-bottom:1.2rem;font-size:0.78rem}
+.selected-colors strong{letter-spacing:0.1em;text-transform:uppercase;font-size:0.65rem;color:var(--tostado)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{display:flex;align-items:center;gap:6px;background:#F5F0E8;border-radius:20px;padding:4px 10px;font-size:0.72rem}
+.chip-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.chip-x{cursor:pointer;color:#999;font-size:10px;font-weight:700}
+.chip-num{font-size:0.65rem;color:var(--tostado);font-weight:600}
+
+.ai-suggestion{background:#FBF7F1;border:1px solid rgba(139,111,71,0.3);border-left:3px solid var(--tostado);border-radius:4px;padding:0.9rem 1rem;margin-bottom:1.2rem;font-size:0.8rem;line-height:1.6}
+.ai-suggestion strong{font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--tostado);display:block;margin-bottom:4px}
+
+.summary-card{background:#fff;border:1px solid rgba(139,111,71,0.25);border-radius:6px;overflow:hidden;margin-bottom:1.5rem}
+.summary-header{background:var(--charcoal);color:#fff;padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between}
+.summary-header h2{font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:500;letter-spacing:0.1em}
+.summary-logo{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;opacity:0.6}
+.summary-body{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.summary-row{padding:0.85rem 1.2rem;border-bottom:1px solid rgba(139,111,71,0.12);display:flex;flex-direction:column;gap:2px}
+.summary-row:nth-child(odd){border-right:1px solid rgba(139,111,71,0.12)}
+.summary-key{font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:#aaa}
+.summary-val{font-size:0.88rem;color:var(--charcoal);font-weight:500}
+.summary-price-row{padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between}
+.price-est{font-family:'Cormorant Garamond',serif;font-size:1.8rem;color:var(--tostado)}
+.price-note{font-size:0.68rem;color:#aaa;line-height:1.5}
+
+.cta-area{display:flex;flex-direction:column;gap:10px}
+.btn-enquire{display:block;width:100%;padding:1rem;background:var(--charcoal);color:#fff;text-align:center;font-family:'Jost',sans-serif;font-size:0.8rem;letter-spacing:0.25em;text-transform:uppercase;border:none;border-radius:4px;cursor:pointer;text-decoration:none;transition:background 0.2s}
+.btn-enquire:hover{background:var(--tostado)}
+.btn-download{display:block;width:100%;padding:0.8rem;background:#fff;color:var(--charcoal);text-align:center;font-family:'Jost',sans-serif;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;border:1px solid rgba(139,111,71,0.4);border-radius:4px;cursor:pointer;transition:all 0.2s}
+.btn-download:hover{border-color:var(--tostado);color:var(--tostado)}
+.btn-next{display:block;width:100%;margin-top:1.2rem;padding:0.9rem;background:var(--tostado);color:#fff;text-align:center;font-family:'Jost',sans-serif;font-size:0.75rem;letter-spacing:0.22em;text-transform:uppercase;border:none;border-radius:4px;cursor:pointer;transition:background 0.2s}
+.btn-next:hover{background:var(--charcoal)}
+
+.lead-time{background:#F5F0E8;border-radius:4px;padding:0.7rem 1rem;font-size:0.75rem;color:#888;text-align:center;margin-bottom:1rem;letter-spacing:0.05em}
+.colgroup-label{font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--charcoal);font-weight:500;margin:1rem 0 0.6rem}
+
+/* ── Imagen AI photo section ── */
+.ai-photo-wrap{border:1px solid rgba(139,111,71,0.25);border-radius:6px;overflow:hidden;margin-bottom:1.5rem;background:#fff}
+.ai-photo-placeholder{padding:2.5rem 1.5rem;text-align:center}
+.ai-placeholder-inner{max-width:480px;margin:0 auto}
+.ai-icon{font-size:1.8rem;color:var(--tostado);margin-bottom:0.75rem}
+.ai-placeholder-title{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:500;color:var(--charcoal);margin-bottom:0.5rem}
+.ai-placeholder-sub{font-size:0.78rem;color:#888;line-height:1.7;margin-bottom:1.2rem}
+.btn-generate{padding:0.85rem 2rem;background:var(--tostado);color:#fff;border:none;border-radius:4px;font-family:'Jost',sans-serif;font-size:0.78rem;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:background 0.2s}
+.btn-generate:hover{background:var(--charcoal)}
+.btn-generate:disabled{opacity:0.5;cursor:not-allowed}
+.ai-loading{padding:3rem 1.5rem;text-align:center}
+.ai-spinner{width:36px;height:36px;border:2px solid rgba(139,111,71,0.2);border-top-color:var(--tostado);border-radius:50%;animation:spin 0.9s linear infinite;margin:0 auto 1rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-loading-title{font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--charcoal);margin-bottom:0.3rem}
+.ai-loading-sub{font-size:0.75rem;color:#aaa}
+.ai-result img{max-height:520px;object-fit:cover}
+.ai-prompt-bar{padding:1rem 1.2rem;border-top:1px solid rgba(139,111,71,0.15);background:#FDFAF6}
+.ai-prompt-label{font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--tostado);margin-bottom:4px}
+.ai-prompt-text{font-size:0.78rem;color:#666;line-height:1.6;margin-bottom:0.8rem;font-style:italic}
+.ai-result-actions{display:flex;gap:8px}
+.btn-regen{padding:0.55rem 1rem;background:#fff;color:var(--charcoal);border:1px solid rgba(139,111,71,0.35);border-radius:3px;font-family:'Jost',sans-serif;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:all 0.2s}
+.btn-regen:hover{border-color:var(--tostado);color:var(--tostado)}
+.btn-save-photo{padding:0.55rem 1rem;background:var(--charcoal);color:#fff;border:none;border-radius:3px;font-family:'Jost',sans-serif;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:background 0.2s}
+.btn-save-photo:hover{background:var(--tostado)}
+.ai-error{padding:1.5rem;text-align:center}
+.ai-error-msg{font-size:0.8rem;color:#c0392b;margin-bottom:0.8rem;background:#fdf0ed;border-radius:4px;padding:0.75rem 1rem}
+
+@media(max-width:600px){
+  .size-grid,.texture-grid{grid-template-columns:repeat(2,1fr)}
+  .pattern-grid{grid-template-columns:repeat(2,1fr)}
+  .custom-row{grid-template-columns:1fr 1fr;grid-template-rows:auto auto}
+  .summary-body{grid-template-columns:1fr}
+  .summary-row:nth-child(odd){border-right:none}
+  .color-palette{grid-template-columns:repeat(5,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <h1>Design Your Custom Rug</h1>
+    <p>The Andes Project &nbsp;·&nbsp; Handcrafted in Argentina &nbsp;·&nbsp; 100% Sheep Wool</p>
+  </div>
+
+  <div class="steps-nav">
+    <button class="step-tab active" onclick="goStep(0)"><span class="step-num">01</span>Size</button>
+    <button class="step-tab" onclick="goStep(1)"><span class="step-num">02</span>Design</button>
+    <button class="step-tab" onclick="goStep(2)"><span class="step-num">03</span>Colour</button>
+    <button class="step-tab" onclick="goStep(3)"><span class="step-num">04</span>Preview</button>
+  </div>
+
+  <!-- STEP 1: SIZE -->
+  <div class="step-panel active" id="panel-0">
+    <div class="section-label">Choose your size</div>
+    <div class="size-grid" id="size-grid"></div>
+    <div style="margin-bottom:1rem">
+      <button class="toggle-custom" onclick="toggleCustom()">+ Enter custom dimensions</button>
+    </div>
+    <div class="custom-size" id="custom-box" style="display:none">
+      <div class="field-label-main">Custom dimensions</div>
+      <div class="custom-row">
+        <div>
+          <div class="field-label">Width (cm)</div>
+          <input type="number" id="cw" placeholder="e.g. 160" min="40" max="350" oninput="updateCustom()">
+        </div>
+        <div>
+          <div class="field-label">Length (cm)</div>
+          <input type="number" id="cl" placeholder="e.g. 230" min="40" max="500" oninput="updateCustom()">
+        </div>
+        <div>
+          <div class="field-label">Shape</div>
+          <select id="custom-shape" onchange="updateCustom()">
+            <option value="rect">Rectangle</option>
+            <option value="round">Round</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="ai-suggestion" id="size-ai"></div>
+    <button class="btn-next" onclick="goStep(1)">Next — Choose Design →</button>
+  </div>
+
+  <!-- STEP 2: DESIGN -->
+  <div class="step-panel" id="panel-1">
+    <div class="section-label">Texture</div>
+    <div class="texture-grid" id="texture-grid"></div>
+    <div class="section-label">Pattern</div>
+    <div class="pattern-grid" id="pattern-grid"></div>
+    <button class="btn-next" onclick="goStep(2)">Next — Choose Colours →</button>
+  </div>
+
+  <!-- STEP 3: COLOUR -->
+  <div class="step-panel" id="panel-2">
+    <div class="ai-suggestion" id="colour-ai"></div>
+    <div id="selected-colours-box" style="display:none" class="selected-colors">
+      <strong>Selected colours (up to 3)</strong>
+      <div class="chips" id="chips-list"></div>
+    </div>
+    <div id="palette-sections"></div>
+    <button class="btn-next" onclick="goStep(3)">Next — Preview &amp; Enquire →</button>
+  </div>
+
+  <!-- STEP 4: PREVIEW -->
+  <div class="step-panel" id="panel-3">
+    <div class="section-label">Design summary</div>
+    <div class="summary-card">
+      <div class="summary-header">
+        <h2>Custom Rug Specification</h2>
+        <div class="summary-logo">The Andes Project</div>
+      </div>
+      <div class="summary-body" id="summary-body"></div>
+      <div style="border-top:1px solid rgba(139,111,71,0.15)">
+        <div class="summary-price-row">
+          <div>
+            <div class="summary-key">Estimated price (AUD)</div>
+            <div class="price-est" id="price-display">—</div>
+          </div>
+          <div class="price-note">Final quote confirmed by The Andes Project.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lead-time" id="lead-time">Production &amp; shipping: approximately 8–14 weeks</div>
+
+    <!-- AI PHOTO SECTION -->
+    <div class="section-label">Visualise your rug</div>
+    <div class="ai-photo-wrap" id="ai-photo-wrap">
+      <div class="ai-photo-placeholder" id="ai-photo-placeholder">
+        <div class="ai-placeholder-inner">
+          <div class="ai-icon">✦</div>
+          <div class="ai-placeholder-title">See your rug in a real home</div>
+          <div class="ai-placeholder-sub">Get a feel of how your rug choice would look in a home, powered by AI</div>
+          <button class="btn-generate" id="btn-generate" onclick="generateRugVisual()">Generate AI Photo</button>
+        </div>
+      </div>
+      <div class="ai-loading" id="ai-loading" style="display:none">
+        <div class="ai-spinner"></div>
+        <div class="ai-loading-title" id="ai-loading-title">Claude is crafting your prompt…</div>
+        <div class="ai-loading-sub" id="ai-loading-sub">This takes about 15–20 seconds</div>
+      </div>
+      <div class="ai-result" id="ai-result" style="display:none">
+        <img id="ai-photo" src="" alt="AI-generated photorealistic rug visualisation" style="width:100%;border-radius:6px 6px 0 0;display:block">
+        <div class="ai-prompt-bar">
+          <div class="ai-prompt-label">Claude's prompt</div>
+          <div class="ai-prompt-text" id="ai-prompt-text"></div>
+          <div class="ai-result-actions">
+            <button class="btn-regen" onclick="generateRugVisual()">↺ Regenerate</button>
+            <button class="btn-save-photo" onclick="savePhoto()">⬇ Save Photo</button>
+          </div>
+        </div>
+      </div>
+      <div class="ai-error" id="ai-error" style="display:none">
+        <div class="ai-error-msg" id="ai-error-msg"></div>
+        <button class="btn-regen" onclick="generateRugVisual()">Try again</button>
+      </div>
+    </div>
+
+    <div class="cta-area">
+      <button class="btn-enquire" onclick="doEnquire()">✉ Enquire Now — Pre-fill Email</button>
+      <button class="btn-download" onclick="doDownload()">⬇ Download Design Summary Card</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const RATE = 600;
+
+const SIZES = [
+  {id:'mini',   name:'Mini',       dims:'60 × 90 cm',   w:60,  l:90,  m2:0.54, popular:false},
+  {id:'small',  name:'Small',      dims:'60 × 120 cm',  w:60,  l:120, m2:0.72, popular:false},
+  {id:'runner', name:'Runner',     dims:'70 × 220 cm',  w:70,  l:220, m2:1.54, popular:true},
+  {id:'medium', name:'Medium',     dims:'150 × 210 cm', w:150, l:210, m2:3.15, popular:false},
+  {id:'large',  name:'Large',      dims:'180 × 250 cm', w:180, l:250, m2:4.50, popular:false},
+  {id:'xlarge', name:'Extra Large',dims:'200 × 300 cm', w:200, l:300, m2:6.00, popular:false},
+];
+
+const TEXTURES = [
+  {id:'plain',   name:'Plain',    desc:'Clean flat weave, minimal texture'},
+  {id:'pompom',  name:'Pom Pom',  desc:'Wool tufts add playful dimension'},
+  {id:'cutpile', name:'Cut Pile', desc:'Soft velvety pile, rich texture'},
+];
+
+const PATTERNS = [
+  {id:'plain',     name:'Solid'},
+  {id:'stripes-h', name:'Horizontal Stripes'},
+  {id:'circle',    name:'Circle Centre'},
+  {id:'block',     name:'Colour Block'},
+  {id:'checkers',  name:'Checkerboard'},
+  {id:'custom',    name:'Custom Pattern'},
+];
+
+// Exact 20 natural dye colours from The Andes Project official swatch palette
+const COLORS = [
+  {id:'c01',  num:'01',   name:'Natural',       hex:'#C8BBA8', group:'Naturals'},
+  {id:'c02',  num:'02',   name:'Dusty Pink',    hex:'#C99490', group:'Pinks & Purples'},
+  {id:'c03',  num:'03',   name:'Pink',          hex:'#C9847E', group:'Pinks & Purples'},
+  {id:'c04',  num:'04',   name:'Lavender',      hex:'#8A7580', group:'Pinks & Purples'},
+  {id:'c05',  num:'05',   name:'Malbec',        hex:'#8A4A4A', group:'Pinks & Purples'},
+  {id:'c06',  num:'06',   name:'Mustard',       hex:'#B8842A', group:'Warm Earthy'},
+  {id:'c07',  num:'07',   name:'Camel',         hex:'#A8704A', group:'Warm Earthy'},
+  {id:'c08',  num:'08',   name:'Sky Blue',      hex:'#8FA8B8', group:'Blues'},
+  {id:'c09',  num:'09',   name:'Blue',          hex:'#6080A8', group:'Blues'},
+  {id:'c10',  num:'10',   name:'Electric Blue', hex:'#384870', group:'Blues'},
+  {id:'c11',  num:'11',   name:'Ash Grey',      hex:'#B0ACA4', group:'Greys'},
+  {id:'c12',  num:'12',   name:'Grey',          hex:'#787068', group:'Greys'},
+  {id:'c13',  num:'13',   name:'Dark Grey',     hex:'#504840', group:'Greys'},
+  {id:'c14',  num:'14',   name:'Sand',          hex:'#C8AE88', group:'Naturals'},
+  {id:'c15',  num:'15',   name:'Tobacco',       hex:'#7A5838', group:'Warm Earthy'},
+  {id:'c151', num:'15.1', name:'Rust',          hex:'#7A3820', group:'Warm Earthy'},
+  {id:'c16',  num:'16',   name:'Natural Black', hex:'#604E44', group:'Greys'},
+  {id:'c17',  num:'17',   name:'Black',         hex:'#202020', group:'Greys'},
+  {id:'c18',  num:'18',   name:'Yerba Green',   hex:'#A0A870', group:'Greens'},
+  {id:'c19',  num:'19',   name:'Olive Green',   hex:'#787840', group:'Greens'},
+  {id:'c20',  num:'20',   name:'Red',           hex:'#B04040', group:'Warm Earthy'},
+];
+
+let state = {
+  size: 'medium',
+  customActive: false,
+  customW: null,
+  customL: null,
+  customShape: 'rect',
+  texture: 'plain',
+  pattern: 'stripes-h',
+  colors: ['c01','c14','c07']
+};
+
+function calcPrice(m2) { return Math.round(m2 * RATE); }
+
+function goStep(n) {
+  const prev = [...document.querySelectorAll('.step-panel')].findIndex(p => p.classList.contains('active'));
+  document.querySelectorAll('.step-panel').forEach((p,i) => p.classList.toggle('active', i===n));
+  document.querySelectorAll('.step-tab').forEach((t,i) => t.classList.toggle('active', i===n));
+  if (n === 3) { renderSummary(); }
+  // If user goes back from preview, reset AI so stale image isn't shown for new config
+  if (prev === 3 && n !== 3 && typeof resetAiPreview === 'function') resetAiPreview();
+}
+
+function buildSizeGrid() {
+  const g = document.getElementById('size-grid');
+  g.innerHTML = SIZES.map(s => {
+    const price = calcPrice(s.m2);
+    return `<div class="size-card${state.size===s.id?' selected':''}" onclick="selectSize('${s.id}')">
+      ${s.popular ? '<div class="sz-badge">Most popular</div>' : ''}
+      <div class="sz-name">${s.name}</div>
+      <div class="sz-dims">${s.dims}</div>
+      <div class="sz-price">from $${price.toLocaleString()} AUD</div>
+    </div>`;
+  }).join('');
+  updateSizeAI();
+}
+
+function selectSize(id) {
+  state.size = id;
+  state.customActive = false;
+  document.getElementById('custom-box').style.display = 'none';
+  buildSizeGrid();
+}
+
+function toggleCustom() {
+  state.customActive = !state.customActive;
+  document.getElementById('custom-box').style.display = state.customActive ? 'block' : 'none';
+}
+
+function updateCustom() {
+  state.customW = parseInt(document.getElementById('cw').value) || null;
+  state.customL = parseInt(document.getElementById('cl').value) || null;
+  state.customShape = document.getElementById('custom-shape').value;
+  if (state.customW && state.customL) {
+    state.size = 'custom';
+    buildSizeGrid();
+    document.querySelectorAll('.size-card').forEach(c => c.classList.remove('selected'));
+  }
+  updateSizeAI();
+}
+
+function getSizeData() {
+  if (state.customActive && state.customW && state.customL) {
+    const m2 = (state.customW * state.customL) / 10000;
+    return { name:'Custom', dims:`${state.customW} × ${state.customL} cm`, m2, price:calcPrice(m2), shape:state.customShape };
+  }
+  const s = SIZES.find(x => x.id === state.size) || SIZES[3];
+  return { ...s, price: calcPrice(s.m2), shape:'rect' };
+}
+
+function updateSizeAI() {
+  const sd = getSizeData();
+  const ai = document.getElementById('size-ai');
+  let tip = '';
+  if (sd.m2 < 1) tip = 'Mini & runner sizes are perfect for hallways, bedside, or layering over larger rugs.';
+  else if (sd.m2 < 2.5) tip = 'This size works beautifully in a study, small bedroom, or as a feature in a narrow hallway.';
+  else if (sd.m2 < 5) tip = 'Medium rugs anchor a seating area perfectly — ensure at least the front legs of your sofa sit on the rug for a cohesive look.';
+  else tip = 'Extra large rugs define an entire room. Allow 30–50 cm of bare floor around the perimeter for best proportions.';
+  ai.innerHTML = `<strong>✦ Size tip</strong>${tip}`;
+}
+
+function buildTextureGrid() {
+  const g = document.getElementById('texture-grid');
+  g.innerHTML = TEXTURES.map(t => `
+    <div class="texture-card${state.texture===t.id?' selected':''}" onclick="selectTexture('${t.id}')">
+      ${textureIcon(t.id)}
+      <div class="texture-name">${t.name}</div>
+      <div class="texture-desc">${t.desc}</div>
+    </div>`).join('');
+}
+
+function textureIcon(id) {
+  if (id === 'plain') return `<svg class="texture-icon" viewBox="0 0 60 40"><rect width="60" height="40" fill="#D4C4A0" rx="3"/><line x1="0" y1="8" x2="60" y2="8" stroke="#C9B08A" stroke-width="1"/><line x1="0" y1="16" x2="60" y2="16" stroke="#C9B08A" stroke-width="1"/><line x1="0" y1="24" x2="60" y2="24" stroke="#C9B08A" stroke-width="1"/><line x1="0" y1="32" x2="60" y2="32" stroke="#C9B08A" stroke-width="1"/></svg>`;
+  if (id === 'pompom') return `<svg class="texture-icon" viewBox="0 0 60 40"><rect width="60" height="40" fill="#D4C4A0" rx="3"/><circle cx="12" cy="10" r="5" fill="#8B6F47"/><circle cx="30" cy="10" r="5" fill="#8B6F47"/><circle cx="48" cy="10" r="5" fill="#8B6F47"/><circle cx="12" cy="28" r="5" fill="#C9B08A"/><circle cx="30" cy="28" r="5" fill="#C9B08A"/><circle cx="48" cy="28" r="5" fill="#C9B08A"/></svg>`;
+  return `<svg class="texture-icon" viewBox="0 0 60 40"><rect width="60" height="40" fill="#8B6F47" rx="3"/><rect width="60" height="40" fill="url(#pile)" rx="3"/><defs><pattern id="pile" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="2.5" fill="#C9B08A" opacity="0.5"/></pattern></defs></svg>`;
+}
+
+function selectTexture(id) { state.texture = id; buildTextureGrid(); }
+
+function buildPatternGrid() {
+  const g = document.getElementById('pattern-grid');
+  g.innerHTML = PATTERNS.map(p => `
+    <div class="pattern-card${state.pattern===p.id?' selected':''}" onclick="selectPattern('${p.id}')">
+      <div class="pattern-preview">${patternSVG(p.id)}</div>
+      <div class="pattern-name">${p.name}</div>
+    </div>`).join('');
+}
+
+function patternSVG(id) {
+  const c1 = state.colors[0] ? COLORS.find(x=>x.id===state.colors[0])?.hex||'#D4C4A0' : '#D4C4A0';
+  const c2 = state.colors[1] ? COLORS.find(x=>x.id===state.colors[1])?.hex||'#8B6F47' : '#8B6F47';
+  const c3 = state.colors[2] ? COLORS.find(x=>x.id===state.colors[2])?.hex||'#2C2C2A' : '#2C2C2A';
+  const W=80, H=50;
+  if (id==='plain')     return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="${c1}"/></svg>`;
+  if (id==='stripes-h') return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="${c1}"/><rect y="10" width="${W}" height="10" fill="${c2}"/><rect y="30" width="${W}" height="10" fill="${c2}"/></svg>`;
+  if (id==='circle')    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="${c1}"/><circle cx="${W/2}" cy="${H/2}" r="${H/2.6}" fill="${c2}"/></svg>`;
+  if (id==='block')     return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="${c1}"/><rect width="${W}" height="18" fill="${c2}"/><rect y="32" width="${W}" height="18" fill="${c3}"/></svg>`;
+  if (id==='checkers') {
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="${c1}"/><rect x="0" y="0" width="20" height="25" fill="${c2}"/><rect x="20" y="25" width="20" height="25" fill="${c2}"/><rect x="40" y="0" width="20" height="25" fill="${c2}"/><rect x="60" y="25" width="20" height="25" fill="${c2}"/></svg>`;
+  }
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="${c1}"/><text x="40" y="30" text-anchor="middle" font-size="11" fill="${c2}" font-family="serif">Custom</text></svg>`;
+}
+
+function selectPattern(id) { state.pattern = id; buildPatternGrid(); }
+
+function buildColorPalette() {
+  const groups = [...new Set(COLORS.map(c => c.group))];
+  const container = document.getElementById('palette-sections');
+  container.innerHTML = groups.map(g => {
+    const cols = COLORS.filter(c => c.group === g);
+    return `<div class="colgroup-label">${g}</div>
+    <div class="color-palette">
+      ${cols.map(c => `
+        <div class="swatch-wrap">
+          <div class="color-swatch${state.colors.includes(c.id)?' selected':''}" style="background:${c.hex}" onclick="toggleColor('${c.id}')" title="${c.name}">
+            <div class="color-check">&#10003;</div>
+            <div class="color-num">${c.num}</div>
+          </div>
+          <div class="color-name">${c.name}</div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+  updateColorAI();
+  renderChips();
+}
+
+function toggleColor(id) {
+  if (state.colors.includes(id)) { state.colors = state.colors.filter(x => x !== id); }
+  else if (state.colors.length < 3) { state.colors.push(id); }
+  buildColorPalette();
+  buildPatternGrid();
+}
+
+function updateColorAI() {
+  const ai = document.getElementById('colour-ai');
+  const ids = state.colors.map(id => COLORS.find(c=>c.id===id)?.name||id).join(', ');
+  let suggestion = '';
+  const hasWarm    = state.colors.some(id => ['c06','c07','c15','c151','c20','c05'].includes(id));
+  const hasCool    = state.colors.some(id => ['c08','c09','c10','c18','c19'].includes(id));
+  const hasNeutral = state.colors.some(id => ['c01','c14','c07','c11','c12','c13'].includes(id));
+  if (state.colors.length === 0) {
+    suggestion = 'Select up to 3 natural dye colours. All colours are extracted from flowers, tree bark and native plants of Argentina.';
+  } else if (hasWarm && hasNeutral) {
+    suggestion = `${ids} — a warm earthy combination that evokes the Argentine landscape. Pairs beautifully with timber floors and natural linen furniture.`;
+  } else if (hasCool && hasNeutral) {
+    suggestion = `${ids} — a serene palette inspired by the Andean highlands. Ideal with light oak flooring and white or grey interiors.`;
+  } else if (state.colors.includes('c17') && hasNeutral) {
+    suggestion = `${ids} — the classic Andes contrast palette. Bold definition meets natural warmth — works in both contemporary and traditional interiors.`;
+  } else {
+    suggestion = `${ids} — a distinctive combination. Our artisans can also mix custom shades to match your exact interior palette. Mention this in your enquiry.`;
+  }
+  ai.innerHTML = `<strong>&#10022; AI colour suggestion</strong>${suggestion}`;
+}
+
+function renderChips() {
+  const box  = document.getElementById('selected-colours-box');
+  const list = document.getElementById('chips-list');
+  box.style.display = state.colors.length ? 'block' : 'none';
+  list.innerHTML = state.colors.map(id => {
+    const c = COLORS.find(x => x.id === id);
+    if (!c) return '';
+    return `<div class="chip"><div class="chip-dot" style="background:${c.hex}"></div><span class="chip-num">#${c.num}</span> ${c.name}<span class="chip-x" onclick="toggleColor('${id}')">&times;</span></div>`;
+  }).join('');
+}
+
+function renderSummary() {
+  const sd      = getSizeData();
+  const cols    = state.colors.map(id => COLORS.find(c=>c.id===id)?.name||id);
+  const texture = TEXTURES.find(t => t.id===state.texture)?.name || 'Plain';
+  const pattern = PATTERNS.find(p => p.id===state.pattern)?.name || 'Custom';
+  const dimStr  = state.customActive && state.customW && state.customL
+    ? `${state.customW} × ${state.customL} cm (Custom)` : sd.dims;
+
+  document.getElementById('price-display').textContent = `$${sd.price.toLocaleString()} AUD`;
+
+  const rows = [
+    {k:'Size',     v:sd.name},
+    {k:'Dimensions',v:dimStr},
+    {k:'Shape',    v:(sd.shape||'rect')==='round'?'Round':'Rectangle'},
+    {k:'Texture',  v:texture},
+    {k:'Pattern',  v:pattern},
+    {k:'Colours',  v:cols.join(', ')||'Not selected'},
+    {k:'Material', v:'100% Sheep Wool'},
+    {k:'Origin',   v:'Handcrafted in Argentina'},
+  ];
+  document.getElementById('summary-body').innerHTML = rows.map(r =>
+    `<div class="summary-row"><div class="summary-key">${r.k}</div><div class="summary-val">${r.v}</div></div>`
+  ).join('');
+
+  document.getElementById('lead-time').textContent = sd.m2 > 4
+    ? 'Production & shipping: approx. 10–14 weeks (rugs over 4m²)'
+    : 'Production & shipping: approx. 8–14 weeks';
+}
+
+function doEnquire() {
+  const sd      = getSizeData();
+  const cols    = state.colors.map(id => COLORS.find(c=>c.id===id)?.name||id);
+  const texture = TEXTURES.find(t => t.id===state.texture)?.name || 'Plain';
+  const pattern = PATTERNS.find(p => p.id===state.pattern)?.name || 'Custom';
+  const dimStr  = state.customActive && state.customW && state.customL
+    ? `${state.customW} × ${state.customL} cm (Custom)` : sd.dims;
+  const shape   = (sd.shape||'rect') === 'round' ? 'Round' : 'Rectangle';
+
+  const subject = encodeURIComponent(`Custom Rug Enquiry — ${sd.name} ${dimStr} | The Andes Project`);
+  const body    = encodeURIComponent(
+`Hello,
+
+I'd like to enquire about a custom rug with the following specifications:
+
+SIZE
+• Size category: ${sd.name}
+• Dimensions: ${dimStr}
+• Shape: ${shape}
+
+DESIGN
+• Texture: ${texture}
+• Pattern: ${pattern}
+
+COLOURS (from your natural dye palette)
+• ${cols.join('\n• ') || 'To be discussed'}
+
+ESTIMATED PRICE
+• $${sd.price.toLocaleString()} AUD (estimated)
+
+Please confirm availability, final pricing, and next steps.
+
+Thank you!`
+  );
+  window.location.href = `mailto:info@theandesproject.com.au?subject=${subject}&body=${body}`;
+}
+
+function doDownload() {
+  const sd      = getSizeData();
+  const cols    = state.colors.map(id => COLORS.find(c=>c.id===id)).filter(Boolean);
+  const c1 = cols[0]?.hex || '#D4C4A0';
+  const c2 = cols[1]?.hex || '#8B6F47';
+  const c3 = cols[2]?.hex || '#2C2C2A';
+  const texture  = TEXTURES.find(t => t.id===state.texture)?.name || 'Plain';
+  const pattern  = PATTERNS.find(p => p.id===state.pattern)?.name || 'Custom';
+  const dimStr   = state.customActive && state.customW && state.customL
+    ? `${state.customW} x ${state.customL} cm` : sd.dims.replace('×','x');
+  const colNames = cols.map(c=>c.name).join(', ') || 'Natural';
+
+  const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+  <rect width="600" height="400" fill="#2C2C2A"/>
+  <rect x="20" y="20" width="560" height="360" fill="#F5F0E8" rx="8"/>
+  <rect x="20" y="20" width="560" height="80" fill="#2C2C2A" rx="8"/>
+  <rect x="20" y="92" width="560" height="8" fill="#2C2C2A"/>
+  <text x="40" y="55" font-family="Georgia,serif" font-size="22" fill="#F5F0E8" font-weight="500" letter-spacing="3">CUSTOM RUG SPECIFICATION</text>
+  <text x="40" y="80" font-family="Arial,sans-serif" font-size="11" fill="#8B6F47" letter-spacing="2">THE ANDES PROJECT · HANDCRAFTED IN ARGENTINA</text>
+  <text x="40" y="130" font-family="Arial,sans-serif" font-size="10" fill="#888" letter-spacing="2">SIZE</text>
+  <text x="40" y="150" font-family="Georgia,serif" font-size="16" fill="#2C2C2A">${sd.name} - ${dimStr}</text>
+  <text x="40" y="190" font-family="Arial,sans-serif" font-size="10" fill="#888" letter-spacing="2">TEXTURE &amp; PATTERN</text>
+  <text x="40" y="210" font-family="Georgia,serif" font-size="16" fill="#2C2C2A">${texture} / ${pattern}</text>
+  <text x="40" y="250" font-family="Arial,sans-serif" font-size="10" fill="#888" letter-spacing="2">COLOURS</text>
+  <text x="40" y="270" font-family="Georgia,serif" font-size="16" fill="#2C2C2A">${colNames}</text>
+  <circle cx="40" cy="310" r="18" fill="${c1}" stroke="#C9B08A" stroke-width="1"/>
+  <circle cx="80" cy="310" r="18" fill="${c2}" stroke="#C9B08A" stroke-width="1"/>
+  <circle cx="120" cy="310" r="18" fill="${c3}" stroke="#C9B08A" stroke-width="1"/>
+  <text x="155" y="315" font-family="Arial,sans-serif" font-size="11" fill="#888">Natural dye colours — flowers, tree bark &amp; native plants</text>
+  <rect x="380" y="230" width="180" height="100" fill="#2C2C2A" rx="6"/>
+  <text x="470" y="258" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#8B6F47" letter-spacing="2">ESTIMATED PRICE</text>
+  <text x="470" y="292" text-anchor="middle" font-family="Georgia,serif" font-size="26" fill="#F5F0E8">$${sd.price.toLocaleString()}</text>
+  <text x="470" y="310" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#aaa">AUD · estimate only</text>
+  <text x="40" y="365" font-family="Arial,sans-serif" font-size="10" fill="#888">info@theandesproject.com.au · theandesproject.com.au · 100% Sheep Wool · 8-14 weeks production</text>
+</svg>`;
+
+  const blob = new Blob([svgStr], {type:'image/svg+xml'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'andes-project-custom-rug.svg';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── IMAGEN 4 INTEGRATION ────────────────────────────────────────────────────
+const API_BASE = 'https://rug-studio-production.up.railway.app';
+
+let lastGeneratedImage = null;
+
+async function generateRugVisual() {
+  const sd      = getSizeData();
+  const cols    = state.colors.map(id => COLORS.find(c => c.id === id)?.name || id);
+  const texture = TEXTURES.find(t => t.id === state.texture)?.name || 'Plain';
+  const pattern = PATTERNS.find(p => p.id === state.pattern)?.name || 'Custom';
+
+  if (cols.length === 0) {
+    showAiError('Please select at least one colour before generating a photo.');
+    return;
+  }
+
+  // Show loading state
+  setAiState('loading');
+  document.getElementById('ai-loading-title').textContent = 'Claude is crafting your prompt…';
+  document.getElementById('ai-loading-sub').textContent   = 'This takes about 15–20 seconds';
+
+  try {
+    const response = await fetch(`${API_BASE}/api/generate-rug-visual`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        size:    sd.name,
+        dims:    sd.dims || `${state.customW} × ${state.customL} cm`,
+        shape:   sd.shape || 'rect',
+        texture: texture,
+        pattern: pattern,
+        colors:  cols,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(err.error || `Server error ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.image) {
+      throw new Error('No image returned from the server.');
+    }
+
+    lastGeneratedImage = data.image;
+
+    // Show result
+    document.getElementById('ai-photo').src         = data.image;
+    document.getElementById('ai-prompt-text').textContent = data.prompt;
+    setAiState('result');
+
+  } catch (err) {
+    console.error('generateRugVisual error:', err);
+    showAiError(`Could not generate image: ${err.message}. Please check your API keys in Railway and try again.`);
+  }
+}
+
+function setAiState(state) {
+  document.getElementById('ai-photo-placeholder').style.display = state === 'placeholder' ? 'block' : 'none';
+  document.getElementById('ai-loading').style.display            = state === 'loading'     ? 'block' : 'none';
+  document.getElementById('ai-result').style.display             = state === 'result'      ? 'block' : 'none';
+  document.getElementById('ai-error').style.display              = state === 'error'       ? 'block' : 'none';
+}
+
+function showAiError(msg) {
+  document.getElementById('ai-error-msg').textContent = msg;
+  setAiState('error');
+}
+
+function savePhoto() {
+  if (!lastGeneratedImage) return;
+  const a   = document.createElement('a');
+  a.href    = lastGeneratedImage;
+  a.download = 'andes-project-rug-visualisation.png';
+  a.click();
+}
+
+// Reset AI state when user changes their config and goes back to preview
+function resetAiPreview() {
+  lastGeneratedImage = null;
+  setAiState('placeholder');
+}
+
+// ─── INITIALISE ──────────────────────────────────────────────────────────────
+buildSizeGrid();
+buildTextureGrid();
+buildPatternGrid();
+buildColorPalette();
+</script>
+</body>
+</html>
