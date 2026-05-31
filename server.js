@@ -6,24 +6,10 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
-// Allow your GoDaddy frontend + local dev
-const ALLOWED_ORIGINS = [
-  'https://theandesproject.com.au',
-  'https://www.theandesproject.com.au',
-  'http://localhost',
-  'http://localhost:3000',
-  'http://127.0.0.1',
-];
-
+// Allow your GoDaddy frontend + local dev + Railway internal calls
+// API keys are stored server-side so it is safe to allow all origins here
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (e.g. mobile apps, curl)
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS policy: origin ${origin} not allowed`));
-    }
-  },
+  origin: true,          // reflect any origin — keys never leave the server
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -45,7 +31,7 @@ app.get('/', (req, res) => {
     status: 'ok',
     service: 'Andes Project Rug Studio API',
     version: '1.0.0',
-    endpoints: ['/api/generate-prompt', '/api/generate-image', '/api/generate-rug-visual'],
+    endpoints: ['/api/generate-rug-visual', '/api/generate-prompt', '/api/generate-image'],
   });
 });
 
@@ -192,7 +178,96 @@ app.post('/api/generate-image', async (req, res) => {
 });
 
 // ─── COMBINED: GENERATE PROMPT + IMAGE IN ONE CALL ───────────────────────────
-// The frontend can call this single endpoint for convenience
+// Calls the shared helper functions directly — no internal HTTP self-fetch,
+// which avoids Railway proxy issues.
+async function generatePrompt({ size, dims, shape, texture, pattern, colors }) {
+  const colorList  = colors.join(', ');
+  const shapeLabel = shape === 'round' ? 'round' : 'rectangular';
+  const textureMap = {
+    plain:   'flat-woven with a smooth, tight weave',
+    pompom:  'featuring tactile wool pom-pom tufts across the surface',
+    cutpile: 'with a dense, velvety cut-pile surface',
+  };
+  const patternMap = {
+    plain:      'a solid single-colour field',
+    'stripes-h':'bold horizontal stripes',
+    block:      'a colour-block design with distinct banded sections',
+    checkers:   'a classic checkerboard pattern',
+    circle:     'a solid circle medallion centred on a plain field',
+    custom:     'an artisan geometric pattern',
+  };
+
+  const textureDesc = textureMap[texture]  || 'handwoven';
+  const patternDesc = patternMap[pattern]  || 'a beautiful pattern';
+
+  const systemPrompt = `You are a luxury interior photography prompt engineer specialising in photorealistic AI image generation for high-end home goods. You write precise, vivid Imagen 4 prompts that produce stunning editorial-quality images. Always respond with ONLY the prompt text — no preamble, no explanation, no quotes.`;
+
+  const userMessage = `Write a single photorealistic image generation prompt for a luxury handwoven Argentine wool rug with these exact specifications:
+- Shape: ${shapeLabel}
+- Size: ${dims}
+- Texture: ${textureDesc}
+- Pattern: ${patternDesc}
+- Colour palette: ${colorList} (natural wool dye tones)
+
+The prompt must place the rug in a beautiful, aspirational living room setting — warm natural light, timber floors, linen or bouclé furniture, styled with plants and ceramics. The rug itself must be the hero of the image, showing fine weave detail, wool texture, and the exact colours specified. Editorial interior photography style, shot from a slightly elevated 45-degree angle, ultra-sharp focus on the rug, shallow depth of field on the background. Photorealistic, 8K quality, no text or watermarks.`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 400,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMessage }],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Anthropic API error: ${err}`);
+  }
+
+  const data   = await response.json();
+  const prompt = data.content?.[0]?.text?.trim();
+  if (!prompt) throw new Error('Empty response from Anthropic');
+  return prompt;
+}
+
+async function generateImage(prompt) {
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GOOGLE_API_KEY}`;
+
+  const response = await fetch(geminiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseModalities: ['IMAGE', 'TEXT'],
+        temperature: 1,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Gemini API error: ${err}`);
+  }
+
+  const data      = await response.json();
+  const parts     = data.candidates?.[0]?.content?.parts || [];
+  const imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));
+  if (!imagePart) throw new Error('No image returned from Gemini 2.5 Flash');
+
+  return {
+    image:    `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`,
+    mimeType: imagePart.inlineData.mimeType,
+  };
+}
+
 app.post('/api/generate-rug-visual', async (req, res) => {
   const { size, dims, shape, texture, pattern, colors } = req.body;
 
@@ -201,43 +276,18 @@ app.post('/api/generate-rug-visual', async (req, res) => {
   }
 
   try {
-    // Step 1: Generate prompt via Claude
-    const promptRes = await fetch(`http://localhost:${PORT}/api/generate-prompt`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ size, dims, shape, texture, pattern, colors }),
-    });
+    // Step 1: Claude writes the photorealistic prompt
+    const prompt = await generatePrompt({ size, dims, shape, texture, pattern, colors });
+    console.log('Generated prompt:', prompt);
 
-    if (!promptRes.ok) {
-      const err = await promptRes.json();
-      return res.status(502).json({ error: 'Prompt generation failed', detail: err });
-    }
+    // Step 2: Gemini renders the image
+    const { image, mimeType } = await generateImage(prompt);
 
-    const { prompt } = await promptRes.json();
-
-    // Step 2: Generate image via Gemini 2.5 Flash
-    const imageRes = await fetch(`http://localhost:${PORT}/api/generate-image`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    });
-
-    if (!imageRes.ok) {
-      const err = await imageRes.json();
-      return res.status(502).json({ error: 'Image generation failed', detail: err });
-    }
-
-    const imageData = await imageRes.json();
-
-    res.json({
-      prompt: imageData.prompt,
-      image:  imageData.image,
-      mimeType: imageData.mimeType,
-    });
+    res.json({ prompt, image, mimeType });
 
   } catch (err) {
     console.error('generate-rug-visual error:', err);
-    res.status(500).json({ error: 'Internal server error', detail: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
