@@ -4,7 +4,7 @@
   "description": "Backend API for The Andes Project custom rug configurator — proxies Google Gemini 2.5 Flash (image generation) and Anthropic Claude (prompt engineering)",
   "main": "server.js",
   "engines": {
-    "node": ">=18.0.0"
+    "node": "18.x"
   },
   "scripts": {
     "start": "node server.js",
@@ -12,8 +12,7 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.19.2",
-    "node-fetch": "^2.7.0"
+    "express": "^4.19.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
