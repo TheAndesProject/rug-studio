@@ -124,7 +124,7 @@ app.post('/api/generate-image', async (req, res) => {
   }
 
   // Gemini 2.5 Flash image generation endpoint
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_API_KEY}`;
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_API_KEY}`;
 
   const body = {
     contents: [
@@ -238,7 +238,7 @@ The prompt must place the rug in a beautiful, aspirational living room setting �
 }
 
 async function generateImage(prompt) {
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_API_KEY}`;
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_API_KEY}`;
 
   const response = await fetch(geminiUrl, {
     method: 'POST',
@@ -308,7 +308,7 @@ app.use((err, req, res, next) => {
 // ─── START ───────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`✅  Andes Project Rug Studio API running on port ${PORT}`);
-  console.log(`    Image model:       gemini-2.0-flash-exp (free tier, 500 images/day)`);
+  console.log(`    Image model:       gemini-2.5-flash-image (free tier, 500 images/day)`);
   console.log(`    Google API key:    ${GOOGLE_API_KEY    ? '✓ set' : '✗ MISSING'}`);
   console.log(`    Anthropic API key: ${ANTHROPIC_API_KEY ? '✓ set' : '✗ MISSING'}`);
 });
