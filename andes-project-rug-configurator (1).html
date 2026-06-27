@@ -110,6 +110,16 @@ input[type=number]:focus,select:focus{border-color:var(--tostado)}
 .lead-time{background:#F5F0E8;border-radius:4px;padding:0.7rem 1rem;font-size:0.75rem;color:#888;text-align:center;margin-bottom:1rem;letter-spacing:0.05em}
 .colgroup-label{font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--charcoal);font-weight:500;margin:1rem 0 0.6rem}
 
+/* ── Colour assignment ── */
+.colour-assign{background:#fff;border:1px solid rgba(139,111,71,0.25);border-radius:4px;padding:1rem 1.2rem;margin-bottom:1.2rem}
+.assign-row{display:flex;align-items:center;gap:12px;padding:0.6rem 0;border-bottom:1px solid rgba(139,111,71,0.1)}
+.assign-row:last-child{border-bottom:none}
+.assign-swatch{width:36px;height:36px;border-radius:50%;flex-shrink:0;border:2px solid rgba(0,0,0,0.1)}
+.assign-label{font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:#888;width:110px;flex-shrink:0}
+.assign-select{flex:1;padding:7px 10px;border:1px solid rgba(139,111,71,0.35);border-radius:3px;font-family:'Jost',sans-serif;font-size:0.82rem;background:#fff;color:var(--charcoal);outline:none;cursor:pointer}
+.assign-select:focus{border-color:var(--tostado)}
+.assign-title{font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--tostado);margin-bottom:0.75rem;font-weight:500}
+
 /* ── Imagen AI photo section ── */
 .ai-photo-wrap{border:1px solid rgba(139,111,71,0.25);border-radius:6px;overflow:hidden;margin-bottom:1.5rem;background:#fff}
 .ai-photo-placeholder{padding:2.5rem 1.5rem;text-align:center}
@@ -199,6 +209,13 @@ input[type=number]:focus,select:focus{border-color:var(--tostado)}
     <div class="texture-grid" id="texture-grid"></div>
     <div class="section-label">Pattern</div>
     <div class="pattern-grid" id="pattern-grid"></div>
+    <div id="colour-assign-wrap" style="display:none">
+      <div class="section-label">Assign colours to pattern</div>
+      <div class="colour-assign">
+        <div class="assign-title">Choose which colour goes where in your rug</div>
+        <div id="assign-rows"></div>
+      </div>
+    </div>
     <button class="btn-next" onclick="goStep(2)">Next — Choose Colours →</button>
   </div>
 
@@ -248,7 +265,7 @@ input[type=number]:focus,select:focus{border-color:var(--tostado)}
       </div>
       <div class="ai-loading" id="ai-loading" style="display:none">
         <div class="ai-spinner"></div>
-        <div class="ai-loading-title" id="ai-loading-title">Claude is crafting your prompt…</div>
+        <div class="ai-loading-title" id="ai-loading-title">Crafting your interior visualisation…</div>
         <div class="ai-loading-sub" id="ai-loading-sub">This takes about 15–20 seconds</div>
       </div>
       <div class="ai-result" id="ai-result" style="display:none">
@@ -335,7 +352,8 @@ let state = {
   customShape: 'rect',
   texture: 'plain',
   pattern: 'stripes-h',
-  colors: ['c01','c14','c07']
+  colors: ['c01','c14','c07'],
+  colorAssignment: {}
 };
 
 function calcPrice(m2) { return Math.round(m2 * RATE); }
@@ -449,7 +467,58 @@ function patternSVG(id) {
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="${c1}"/><text x="40" y="30" text-anchor="middle" font-size="11" fill="${c2}" font-family="serif">Custom</text></svg>`;
 }
 
-function selectPattern(id) { state.pattern = id; buildPatternGrid(); }
+function selectPattern(id) { state.pattern = id; buildPatternGrid(); buildColourAssign(); }
+
+// Pattern slot definitions — what each slot means for each pattern
+const PATTERN_SLOTS = {
+  plain:      [{key:'bg',      label:'Rug colour'}],
+  'stripes-h':[{key:'bg',      label:'Main stripe'}, {key:'alt',    label:'Alt stripe'}],
+  block:      [{key:'bg',      label:'Centre field'},{key:'top',    label:'Top band'},   {key:'bot', label:'Bottom band'}],
+  checkers:   [{key:'bg',      label:'Colour A'},    {key:'alt',    label:'Colour B'}],
+  circle:     [{key:'bg',      label:'Background'},  {key:'circle', label:'Circle'}],
+  custom:     [{key:'bg',      label:'Main colour'}, {key:'alt',    label:'Accent colour'}],
+};
+
+function buildColourAssign() {
+  const slots = PATTERN_SLOTS[state.pattern] || [];
+  const wrap  = document.getElementById('colour-assign-wrap');
+  const rows  = document.getElementById('assign-rows');
+
+  if (slots.length === 0) { wrap.style.display='none'; return; }
+  wrap.style.display = 'block';
+
+  // Build colour options from selected colours — fall back to full palette if <2 selected
+  const pool = state.colors.length >= 1
+    ? state.colors.map(id => COLORS.find(c=>c.id===id)).filter(Boolean)
+    : COLORS;
+
+  rows.innerHTML = slots.map((slot, i) => {
+    const defaultColor = pool[i % pool.length];
+    const currentId = state.colorAssignment[slot.key] || defaultColor?.id || '';
+    const currentColor = COLORS.find(c=>c.id===currentId) || defaultColor;
+    return `<div class="assign-row">
+      <div class="assign-swatch" id="swatch-${slot.key}" style="background:${currentColor?.hex||'#ccc'}"></div>
+      <div class="assign-label">${slot.label}</div>
+      <select class="assign-select" onchange="setAssignment('${slot.key}', this.value)">
+        ${COLORS.map(c=>`<option value="${c.id}"${c.id===currentId?' selected':''}>#${c.num} ${c.name}</option>`).join('')}
+      </select>
+    </div>`;
+  }).join('');
+
+  // Set defaults in state
+  slots.forEach((slot, i) => {
+    if (!state.colorAssignment[slot.key]) {
+      state.colorAssignment[slot.key] = pool[i % pool.length]?.id || '';
+    }
+  });
+}
+
+function setAssignment(key, colorId) {
+  state.colorAssignment[key] = colorId;
+  const c = COLORS.find(x=>x.id===colorId);
+  const sw = document.getElementById('swatch-'+key);
+  if (sw && c) sw.style.background = c.hex;
+}
 
 function buildColorPalette() {
   const groups = [...new Set(COLORS.map(c => c.group))];
@@ -477,6 +546,7 @@ function toggleColor(id) {
   else if (state.colors.length < 3) { state.colors.push(id); }
   buildColorPalette();
   buildPatternGrid();
+  buildColourAssign();
 }
 
 function updateColorAI() {
@@ -640,7 +710,7 @@ async function generateRugVisual() {
 
   // Show loading state
   setAiState('loading');
-  document.getElementById('ai-loading-title').textContent = 'Claude is crafting your prompt…';
+  document.getElementById('ai-loading-title').textContent = 'Crafting your interior visualisation…';
   document.getElementById('ai-loading-sub').textContent   = 'This takes about 15–20 seconds';
 
   try {
@@ -648,12 +718,13 @@ async function generateRugVisual() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        size:    sd.name,
-        dims:    sd.dims || `${state.customW} × ${state.customL} cm`,
-        shape:   sd.shape || 'rect',
-        texture: texture,
-        pattern: pattern,
-        colors:  cols,
+        size:             sd.name,
+        dims:             sd.dims || `${state.customW} × ${state.customL} cm`,
+        shape:            sd.shape || 'rect',
+        texture:          texture,
+        pattern:          pattern,
+        colors:           cols,
+        colorAssignment:  state.colorAssignment,
       }),
     });
 
@@ -712,6 +783,7 @@ buildSizeGrid();
 buildTextureGrid();
 buildPatternGrid();
 buildColorPalette();
+buildColourAssign();
 </script>
 </body>
 </html>
