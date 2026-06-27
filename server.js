@@ -40,7 +40,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime
 // ─── STEP 1: GENERATE IMAGEN PROMPT VIA CLAUDE ───────────────────────────────
 // Accepts rug config, returns a photorealistic prompt string
 app.post('/api/generate-prompt', async (req, res) => {
-  const { size, dims, shape, texture, pattern, colors } = req.body;
+  const { size, dims, shape, texture, pattern, colors, colorAssignment } = req.body;
 
   if (!colors || !Array.isArray(colors) || colors.length === 0) {
     return res.status(400).json({ error: 'colors array is required' });
@@ -180,36 +180,44 @@ app.post('/api/generate-image', async (req, res) => {
 // ─── COMBINED: GENERATE PROMPT + IMAGE IN ONE CALL ───────────────────────────
 // Calls the shared helper functions directly — no internal HTTP self-fetch,
 // which avoids Railway proxy issues.
-async function generatePrompt({ size, dims, shape, texture, pattern, colors }) {
-  const colorList  = colors.join(', ');
-  const shapeLabel = shape === 'round' ? 'round' : 'rectangular';
-  const textureMap = {
+async function generatePrompt({ size, dims, shape, texture, pattern, colors, colorAssignment }) {
+  const ca          = colorAssignment || {};
+  const shapeLabel  = shape === 'round' ? 'round/circular' : 'rectangular';
+  const textureMap  = {
     plain:   'flat-woven with a smooth, tight weave',
     pompom:  'featuring tactile wool pom-pom tufts across the surface',
     cutpile: 'with a dense, velvety cut-pile surface',
   };
-  const patternMap = {
-    plain:      'a solid single-colour field',
-    'stripes-h':'bold horizontal stripes',
-    block:      'a colour-block design with distinct banded sections',
-    checkers:   'a classic checkerboard pattern',
-    circle:     'a solid circle medallion centred on a plain field',
-    custom:     'an artisan geometric pattern',
-  };
 
-  const textureDesc = textureMap[texture]  || 'handwoven';
-  const patternDesc = patternMap[pattern]  || 'a beautiful pattern';
+  // Build hyper-specific colour placement description
+  let colourDetail = '';
+  if (pattern === 'plain') {
+    colourDetail = `Entirely solid ${ca.bg || colors[0] || ''} — one single colour throughout, no pattern`;
+  } else if (pattern === 'stripes-h') {
+    colourDetail = `Bold horizontal stripes strictly alternating between ${ca.bg || colors[0] || ''} and ${ca.alt || colors[1] || ''} — equal width bands running across the full width`;
+  } else if (pattern === 'block') {
+    colourDetail = `Colour block design: a ${ca.top || colors[1] || ''} band across the top, a wide ${ca.bg || colors[0] || ''} centre field, and a ${ca.bot || colors[2] || ''} band across the bottom`;
+  } else if (pattern === 'checkers') {
+    colourDetail = `Classic checkerboard of equal squares strictly alternating between ${ca.bg || colors[0] || ''} and ${ca.alt || colors[1] || ''}`;
+  } else if (pattern === 'circle') {
+    colourDetail = `Plain ${ca.bg || colors[0] || ''} background with one large solid ${ca.circle || colors[1] || ''} circle perfectly centred on the rug — no border, no outline, just a clean filled circle`;
+  } else {
+    colourDetail = `${colors.join(', ')} in an artisan geometric pattern`;
+  }
 
-  const systemPrompt = `You are a luxury interior photography prompt engineer specialising in photorealistic AI image generation for high-end home goods. You write precise, vivid Imagen 4 prompts that produce stunning editorial-quality images. Always respond with ONLY the prompt text — no preamble, no explanation, no quotes.`;
+  const systemPrompt = `You are a luxury interior photography prompt engineer specialising in photorealistic AI image generation for high-end home goods. You write precise, vivid prompts that produce stunning editorial-quality images. Always respond with ONLY the prompt text — no preamble, no explanation, no quotes.`;
 
-  const userMessage = `Write a single photorealistic image generation prompt for a luxury handwoven Argentine wool rug with these exact specifications:
+  const userMessage = `Write a single photorealistic image generation prompt for a luxury handwoven Argentine wool rug. You MUST reproduce the rug's design and colours exactly as specified — this is the most important requirement.
+
+RUG SPECIFICATIONS (reproduce precisely):
 - Shape: ${shapeLabel}
 - Size: ${dims}
-- Texture: ${textureDesc}
-- Pattern: ${patternDesc}
-- Colour palette: ${colorList} (natural wool dye tones)
+- Texture: ${textureMap[texture] || 'handwoven wool'}
+- Design & colour placement: ${colourDetail}
 
-The prompt must place the rug in a beautiful, aspirational living room setting — warm natural light, timber floors, linen or bouclé furniture, styled with plants and ceramics. The rug itself must be the hero of the image, showing fine weave detail, wool texture, and the exact colours specified. Editorial interior photography style, shot from a slightly elevated 45-degree angle, ultra-sharp focus on the rug, shallow depth of field on the background. Photorealistic, 8K quality, no text or watermarks.`;
+SCENE: Beautiful aspirational living room, warm natural light, wide-plank timber floors, linen or bouclé sofa, ceramic vases, indoor plants. The rug fills the centre of frame.
+
+PHOTOGRAPHY: Slightly elevated 45-degree angle, ultra-sharp focus on rug surface showing exact wool texture, weave detail and colours, shallow depth of field blurring background. Editorial interior photography quality, photorealistic, no text, no watermarks, no people.`;
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -269,7 +277,7 @@ async function generateImage(prompt) {
 }
 
 app.post('/api/generate-rug-visual', async (req, res) => {
-  const { size, dims, shape, texture, pattern, colors } = req.body;
+  const { size, dims, shape, texture, pattern, colors, colorAssignment } = req.body;
 
   if (!colors || !Array.isArray(colors) || colors.length === 0) {
     return res.status(400).json({ error: 'colors array is required' });
@@ -277,7 +285,7 @@ app.post('/api/generate-rug-visual', async (req, res) => {
 
   try {
     // Step 1: Claude writes the photorealistic prompt
-    const prompt = await generatePrompt({ size, dims, shape, texture, pattern, colors });
+    const prompt = await generatePrompt({ size, dims, shape, texture, pattern, colors, colorAssignment });
     console.log('Generated prompt:', prompt);
 
     // Step 2: Gemini renders the image
