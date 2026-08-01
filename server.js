@@ -48,9 +48,10 @@ app.post('/api/generate-prompt', async (req, res) => {
 
   const colorList  = colors.join(', ');
   const shapeLabel = shape === 'round' ? 'round' : 'rectangular';
+  const pompomCol = (colorAssignment || {}).pompom || '';
   const textureMap = {
     plain:   'flat-woven with a smooth, tight weave',
-    pompom:  'featuring tactile wool pom-pom tufts across the surface',
+    pompom:  `featuring tactile wool pom-pom tufts${pompomCol ? ' in ' + pompomCol : ''} scattered across the surface`,
     cutpile: 'with a dense, velvety cut-pile surface',
   };
   const patternMap = {
@@ -183,9 +184,10 @@ app.post('/api/generate-image', async (req, res) => {
 async function generatePrompt({ size, dims, shape, texture, pattern, colors, colorAssignment }) {
   const ca          = colorAssignment || {};
   const shapeLabel  = shape === 'round' ? 'round/circular' : 'rectangular';
+  const pompomColour = ca.pompom ? ` in ${ca.pompom}` : '';
   const textureMap  = {
     plain:   'flat-woven with a smooth, tight weave',
-    pompom:  'featuring tactile wool pom-pom tufts across the surface',
+    pompom:  `featuring tactile wool pom-pom tufts${pompomColour} scattered across the surface`,
     cutpile: 'with a dense, velvety cut-pile surface',
   };
 
