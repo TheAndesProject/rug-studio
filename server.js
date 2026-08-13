@@ -104,84 +104,17 @@ app.post('/api/generate-image', async (req, res) => {
 // which avoids Railway proxy issues.
 // Build a precise, direct Gemini prompt from the rug config — no AI middleman.
 // Every detail maps 1:1 from what the customer selected.
-// Build the exact rug spec from customer selections
-function buildRugSpec({ size, dims, shape, texture, pattern, colors, colorAssignment }) {
-  const ca = colorAssignment || {};
-  const shapeDesc = shape === 'round' ? 'round' : 'rectangular';
-
-  const pompomColour = ca.pompom || '';
-  const textureDesc = {
-    plain:   'flat-woven smooth surface with tight even weave',
-    pompom:  pompomColour
-               ? `wool pom-pom texture — ${pompomColour} coloured wool tufts/balls densely covering the entire surface`
-               : 'wool pom-pom texture — small wool tufts/balls densely covering the entire surface',
-    cutpile: 'cut-pile with dense velvety pile surface',
-  }[texture] || 'handwoven wool';
-
-  let patternDesc = '';
-  if (pattern === 'plain') {
-    patternDesc = `SOLID — entire rug is one flat colour: ${ca.bg || colors[0] || 'natural'}. No pattern, no markings.`;
-  } else if (pattern === 'stripes-h') {
-    const c1 = ca.bg  || colors[0] || 'natural';
-    const c2 = ca.alt || colors[1] || 'sand';
-    patternDesc = `HORIZONTAL STRIPES — equal-width bands alternating strictly between ${c1} and ${c2}, running across the full width. No other colours.`;
-  } else if (pattern === 'block') {
-    const cTop = ca.top || colors[1] || 'sand';
-    const cMid = ca.bg  || colors[0] || 'natural';
-    const cBot = ca.bot || colors[2] || 'tobacco';
-    patternDesc = `COLOUR BLOCK — exactly 3 horizontal sections: ${cTop} top band, wide ${cMid} centre, ${cBot} bottom band. Clean hard edges. No other colours.`;
-  } else if (pattern === 'checkers') {
-    const c1 = ca.bg  || colors[0] || 'natural';
-    const c2 = ca.alt || colors[1] || 'black';
-    patternDesc = `CHECKERBOARD — equal squares in a strict grid alternating between ${c1} and ${c2} only. No other colours.`;
-  } else if (pattern === 'circle') {
-    const bg  = ca.bg     || colors[0] || 'natural';
-    const cir = ca.circle || colors[1] || 'sand';
-    patternDesc = `CIRCLE CENTRE — flat solid ${bg} background. One large solid ${cir} circle perfectly centred. No border, no outline, no other elements.`;
-  } else {
-    const c1 = ca.bg  || colors[0] || 'natural';
-    const c2 = ca.alt || colors[1] || 'sand';
-    patternDesc = `CUSTOM GEOMETRIC — artisan pattern in ${c1} and ${c2}.`;
-  }
-
-  return { shapeDesc, textureDesc, patternDesc, dims };
-}
-
-// Build the final Gemini prompt directly — no AI middleman for the design spec.
-// The pattern and colour instructions come first so Gemini prioritises them.
+// Generate a prompt for an EMPTY room — no rug.
+// The rug will be composited on top accurately in the browser.
 function generatePrompt({ size, dims, shape, texture, pattern, colors, colorAssignment }) {
-  const spec = buildRugSpec({ size, dims, shape, texture, pattern, colors, colorAssignment });
-
-  // Pattern instruction — placed at the very start so Gemini reads it first
-  const patternInstruction = {
-    plain:     `The rug is a single flat solid colour with absolutely no pattern. ${spec.patternDesc}`,
-    'stripes-h': `The rug has bold horizontal stripes only — NOT vertical, NOT diagonal. ${spec.patternDesc}`,
-    block:     `The rug has exactly three horizontal colour blocks from top to bottom. ${spec.patternDesc}`,
-    checkers:  `The rug has a checkerboard pattern of equal squares. ${spec.patternDesc}`,
-    circle:    `The rug has a single large circle in the centre on a plain background. ${spec.patternDesc}`,
-    custom:    spec.patternDesc,
-  }[pattern] || spec.patternDesc;
-
   return [
-    // Lead with the design — most important instruction goes first
-    `IMPORTANT: Generate a photorealistic image of a handwoven wool rug with this EXACT design:`,
-    `Pattern: ${patternInstruction}`,
-    `Surface texture: ${spec.textureDesc}`,
-    `Shape: ${spec.shapeDesc}, size ${spec.dims}`,
-    ``,
-    // Scene second
-    `The rug is lying flat on wide-plank warm timber floors in a beautiful living room.`,
-    `Soft natural window light. A neutral linen sofa is softly visible at the top of the frame.`,
-    `Simple ceramic vase and indoor plant in the background.`,
-    ``,
-    // Camera third
-    `Camera angle: 45-degree overhead view looking down at the rug.`,
-    `The rug fills 70% of the frame. Ultra-sharp focus on the rug surface showing every thread, fibre and colour clearly.`,
-    `Shallow depth of field — background furniture is softly blurred.`,
-    ``,
-    // Constraints last
-    `Photorealistic interior photography. No people. No text. No watermarks. No illustrations.`,
-    `The rug pattern and colours must match the specification above exactly.`,
+    `Photorealistic interior design photograph of a beautiful aspirational living room.`,
+    `Wide-plank warm oak timber floors — the floor must be COMPLETELY CLEAR and EMPTY in the centre-foreground of the image, with no rug, no furniture, no objects on the floor.`,
+    `A neutral linen sofa sits against the back wall. Soft warm natural window light from the left.`,
+    `A simple tall ceramic vase and a small indoor plant are visible near the sofa.`,
+    `Muted warm neutral wall colour. Minimal, elegant Scandinavian-meets-Argentine interior style.`,
+    `Camera angle: slightly elevated 45-degree view looking into the room. The empty timber floor fills the lower 60% of the frame.`,
+    `Photorealistic, editorial interior photography quality. No people. No text. No watermarks.`,
   ].join(' ');
 }
 
