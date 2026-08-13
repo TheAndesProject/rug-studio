@@ -18,10 +18,9 @@ app.use(express.json({ limit: '2mb' }));
 
 // ─── ENV VALIDATION ──────────────────────────────────────────────────────────
 const GOOGLE_API_KEY    = process.env.GOOGLE_API_KEY;
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
-if (!GOOGLE_API_KEY || !ANTHROPIC_API_KEY) {
-  console.error('⚠️  Missing environment variables: GOOGLE_API_KEY and/or ANTHROPIC_API_KEY');
+if (!GOOGLE_API_KEY) {
+  console.error('⚠️  Missing environment variable: GOOGLE_API_KEY');
 }
 
 // ─── HEALTH CHECK ────────────────────────────────────────────────────────────
@@ -148,52 +147,42 @@ function buildRugSpec({ size, dims, shape, texture, pattern, colors, colorAssign
   return { shapeDesc, textureDesc, patternDesc, dims };
 }
 
-// Claude turns the spec into vivid Gemini-optimised language —
-// but is strictly forbidden from changing any design detail.
-async function generatePrompt({ size, dims, shape, texture, pattern, colors, colorAssignment }) {
+// Build the final Gemini prompt directly — no AI middleman for the design spec.
+// The pattern and colour instructions come first so Gemini prioritises them.
+function generatePrompt({ size, dims, shape, texture, pattern, colors, colorAssignment }) {
   const spec = buildRugSpec({ size, dims, shape, texture, pattern, colors, colorAssignment });
 
-  const system = `You are a Gemini image generation prompt writer for luxury handwoven rugs. Your ONLY job is to turn a rug specification into a single vivid, photorealistic Gemini image prompt.
+  // Pattern instruction — placed at the very start so Gemini reads it first
+  const patternInstruction = {
+    plain:     `The rug is a single flat solid colour with absolutely no pattern. ${spec.patternDesc}`,
+    'stripes-h': `The rug has bold horizontal stripes only — NOT vertical, NOT diagonal. ${spec.patternDesc}`,
+    block:     `The rug has exactly three horizontal colour blocks from top to bottom. ${spec.patternDesc}`,
+    checkers:  `The rug has a checkerboard pattern of equal squares. ${spec.patternDesc}`,
+    circle:    `The rug has a single large circle in the centre on a plain background. ${spec.patternDesc}`,
+    custom:    spec.patternDesc,
+  }[pattern] || spec.patternDesc;
 
-STRICT RULES:
-1. Every design detail in the spec (pattern, colours, texture) MUST appear in your prompt verbatim — do not change, interpret or replace any colour name or pattern description
-2. Do NOT add colours or design elements not listed in the spec
-3. Do NOT use vague language like "earthy tones" — use the exact colour names given
-4. Output ONLY the prompt text. No preamble, no explanation, no quotes.`;
-
-  const user = `Write a Gemini image generation prompt for this handwoven Argentine wool rug:
-
-SHAPE: ${spec.shapeDesc}
-SIZE: ${spec.dims}
-SURFACE TEXTURE: ${spec.textureDesc}
-PATTERN & COLOURS: ${spec.patternDesc}
-
-The prompt must:
-- Reproduce the pattern and colours above with total accuracy — this is non-negotiable
-- Place the rug in a beautiful aspirational living room: warm natural window light, wide-plank timber floors, neutral linen sofa softly visible, ceramic vase, indoor plant
-- Describe the camera angle: slightly overhead 45 degrees, rug fills 70% of frame, ultra-sharp focus on rug surface revealing texture and colour, shallow depth of field behind
-- End with: photorealistic interior photography, no people, no text, no watermarks`;
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method:  'POST',
-    headers: {
-      'Content-Type':      'application/json',
-      'x-api-key':         ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model:      'claude-sonnet-4-5',
-      max_tokens: 600,
-      system,
-      messages: [{ role: 'user', content: user }],
-    }),
-  });
-
-  if (!response.ok) throw new Error(`Anthropic API error: ${await response.text()}`);
-  const data   = await response.json();
-  const prompt = data.content?.[0]?.text?.trim();
-  if (!prompt) throw new Error('Empty response from Anthropic');
-  return prompt;
+  return [
+    // Lead with the design — most important instruction goes first
+    `IMPORTANT: Generate a photorealistic image of a handwoven wool rug with this EXACT design:`,
+    `Pattern: ${patternInstruction}`,
+    `Surface texture: ${spec.textureDesc}`,
+    `Shape: ${spec.shapeDesc}, size ${spec.dims}`,
+    ``,
+    // Scene second
+    `The rug is lying flat on wide-plank warm timber floors in a beautiful living room.`,
+    `Soft natural window light. A neutral linen sofa is softly visible at the top of the frame.`,
+    `Simple ceramic vase and indoor plant in the background.`,
+    ``,
+    // Camera third
+    `Camera angle: 45-degree overhead view looking down at the rug.`,
+    `The rug fills 70% of the frame. Ultra-sharp focus on the rug surface showing every thread, fibre and colour clearly.`,
+    `Shallow depth of field — background furniture is softly blurred.`,
+    ``,
+    // Constraints last
+    `Photorealistic interior photography. No people. No text. No watermarks. No illustrations.`,
+    `The rug pattern and colours must match the specification above exactly.`,
+  ].join(' ');
 }
 
 async function generateImage(prompt) {
@@ -236,7 +225,7 @@ app.post('/api/generate-rug-visual', async (req, res) => {
 
   try {
     // Step 1: Claude writes the photorealistic prompt
-    const prompt = await generatePrompt({ size, dims, shape, texture, pattern, colors, colorAssignment });
+    const prompt = generatePrompt({ size, dims, shape, texture, pattern, colors, colorAssignment });
     console.log('Generated prompt:', prompt);
 
     // Step 2: Gemini renders the image
@@ -269,5 +258,4 @@ app.listen(PORT, () => {
   console.log(`✅  Andes Project Rug Studio API running on port ${PORT}`);
   console.log(`    Image model:       gemini-2.5-flash-image (free tier, 500 images/day)`);
   console.log(`    Google API key:    ${GOOGLE_API_KEY    ? '✓ set' : '✗ MISSING'}`);
-  console.log(`    Anthropic API key: ${ANTHROPIC_API_KEY ? '✓ set' : '✗ MISSING'}`);
 });
