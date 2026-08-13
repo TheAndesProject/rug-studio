@@ -46,7 +46,7 @@ app.post('/api/generate-image', async (req, res) => {
   }
 
   // Gemini 2.5 Flash image generation endpoint
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_API_KEY}`;
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateContent?key=${GOOGLE_API_KEY}`;
 
   const body = {
     contents: [
@@ -186,7 +186,7 @@ function generatePrompt({ size, dims, shape, texture, pattern, colors, colorAssi
 }
 
 async function generateImage(prompt) {
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_API_KEY}`;
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateContent?key=${GOOGLE_API_KEY}`;
 
   const response = await fetch(geminiUrl, {
     method: 'POST',
@@ -256,6 +256,6 @@ app.use((err, req, res, next) => {
 // ─── START ───────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`✅  Andes Project Rug Studio API running on port ${PORT}`);
-  console.log(`    Image model:       gemini-2.5-flash-image (free tier, 500 images/day)`);
+  console.log(`    Image model:       gemini-3-pro-image (free tier, 500 images/day)`);
   console.log(`    Google API key:    ${GOOGLE_API_KEY    ? '✓ set' : '✗ MISSING'}`);
 });
