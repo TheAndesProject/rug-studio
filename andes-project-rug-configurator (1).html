@@ -257,7 +257,7 @@ input[type=number]:focus,select:focus{border-color:var(--tostado)}
         <div class="ai-loading-sub" id="ai-loading-sub">This takes about 15–20 seconds</div>
       </div>
       <div class="ai-result" id="ai-result" style="display:none">
-        <img id="ai-photo" src="" alt="AI-generated photorealistic rug visualisation" style="width:100%;border-radius:6px 6px 0 0;display:block">
+        <canvas id="ai-canvas" style="width:100%;border-radius:6px 6px 0 0;display:block"></canvas>
         <div class="ai-prompt-bar">
           <div class="ai-result-actions">
             <button class="btn-regen" onclick="generateRugVisual()">↺ Regenerate</button>
@@ -686,36 +686,160 @@ const API_BASE = 'https://rug-studio-production.up.railway.app';
 
 let lastGeneratedImage = null;
 
-async function generateRugVisual() {
-  const sd      = getSizeData();
-  const _dIds  = [...new Set(Object.values(state.colorAssignment))].filter(Boolean);
-  const cols    = _dIds.map(id => COLORS.find(c => c.id === id)?.name || id);
-  const texture = TEXTURES.find(t => t.id === state.texture)?.name || 'Plain';
-  const pattern = PATTERNS.find(p => p.id === state.pattern)?.name || 'Custom';
+// ── Build accurate rug SVG from customer selections ───────────────────────────
+function buildRugSVG(W, H) {
+  const ca = state.colorAssignment || {};
+  const getHex = key => {
+    const id = ca[key];
+    return id ? (COLORS.find(c=>c.id===id)?.hex || '#D4C4A0') : '#D4C4A0';
+  };
 
-  if (cols.length === 0) {
-    showAiError('Please select at least one colour before generating a photo.');
+  const c1 = getHex('bg');
+  const c2 = getHex('alt') || getHex('circle') || getHex('top') || '#8B6F47';
+  const c3 = getHex('bot') || '#5C3D2A';
+  const cPom = getHex('pompom') || c2;
+  const isRound = (getSizeData().shape === 'round');
+
+  let patternEl = '';
+  const clipId = 'rugclip';
+
+  if (state.pattern === 'plain') {
+    patternEl = `<rect width="${W}" height="${H}" fill="${c1}"/>`;
+
+  } else if (state.pattern === 'stripes-h') {
+    const n = 10; const sh = H/n;
+    patternEl = Array.from({length:n},(_,i)=>
+      `<rect y="${i*sh}" width="${W}" height="${sh}" fill="${i%2===0?c1:c2}"/>`
+    ).join('');
+
+  } else if (state.pattern === 'block') {
+    const bandH = H * 0.18;
+    const topC = getHex('top') || c2;
+    const botC = getHex('bot') || c3;
+    patternEl = `<rect width="${W}" height="${H}" fill="${c1}"/>
+      <rect width="${W}" height="${bandH}" fill="${topC}"/>
+      <rect y="${H-bandH}" width="${W}" height="${bandH}" fill="${botC}"/>`;
+
+  } else if (state.pattern === 'checkers') {
+    const n = 8; const sw = W/n; const sh = H/n;
+    patternEl = Array.from({length:n},(_,i)=>
+      Array.from({length:n},(_,j)=>
+        `<rect x="${i*sw}" y="${j*sh}" width="${sw}" height="${sh}" fill="${(i+j)%2===0?c1:c2}"/>`
+      ).join('')
+    ).join('');
+
+  } else if (state.pattern === 'circle') {
+    const cx = W/2, cy = H/2, r = Math.min(W,H)*0.38;
+    patternEl = `<rect width="${W}" height="${H}" fill="${c1}"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${c2}"/>`;
+
+  } else {
+    patternEl = `<rect width="${W}" height="${H}" fill="${c1}"/>`;
+  }
+
+  // Pom pom texture overlay
+  let textureEl = '';
+  if (state.texture === 'pompom') {
+    const dots = [];
+    for(let x=12;x<W;x+=18) for(let y=12;y<H;y+=18)
+      dots.push(`<circle cx="${x}" cy="${y}" r="5" fill="${cPom}" opacity="0.7"/>`);
+    textureEl = dots.join('');
+  } else if (state.texture === 'cutpile') {
+    textureEl = `<rect width="${W}" height="${H}" fill="rgba(0,0,0,0.06)" style="mix-blend-mode:multiply"/>`;
+  }
+
+  // Clip shape
+  const clipShape = isRound
+    ? `<ellipse cx="${W/2}" cy="${H/2}" rx="${W/2}" ry="${H/2}"/>`
+    : `<rect width="${W}" height="${H}" rx="6"/>`;
+
+  // Border
+  const border = isRound
+    ? `<ellipse cx="${W/2}" cy="${H/2}" rx="${W/2-2}" ry="${H/2-2}" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="4"/>`
+    : `<rect x="2" y="2" width="${W-4}" height="${H-4}" rx="5" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="4"/>`;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <defs><clipPath id="${clipId}">${clipShape}</clipPath></defs>
+    <g clip-path="url(#${clipId})">${patternEl}${textureEl}</g>
+    ${border}
+  </svg>`;
+}
+
+// ── Composite room photo + SVG rug onto canvas ────────────────────────────────
+async function compositeRugOnRoom(roomBase64) {
+  const canvas = document.getElementById('ai-canvas');
+  const ctx    = canvas.getContext('2d');
+
+  // Load room photo
+  const roomImg = await new Promise((res, rej) => {
+    const img = new Image();
+    img.onload  = () => res(img);
+    img.onerror = rej;
+    img.src = roomBase64;
+  });
+
+  // Set canvas to room photo dimensions
+  canvas.width  = roomImg.width;
+  canvas.height = roomImg.height;
+
+  // Draw room
+  ctx.drawImage(roomImg, 0, 0);
+
+  // Rug dimensions — roughly 55% wide, 35% tall, centred horizontally, lower half
+  const rugW = Math.round(canvas.width  * 0.55);
+  const rugH = Math.round(canvas.height * 0.35);
+  const rugX = Math.round((canvas.width  - rugW) / 2);
+  const rugY = Math.round(canvas.height  * 0.52);
+
+  // Add perspective shadow under rug
+  ctx.save();
+  ctx.shadowColor   = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur    = 24;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle = 'rgba(0,0,0,0.01)'; // transparent fill just to trigger shadow
+  ctx.fillRect(rugX+8, rugY+8, rugW-16, rugH-16);
+  ctx.restore();
+
+  // Convert SVG to image and draw onto canvas
+  const svgStr  = buildRugSVG(rugW, rugH);
+  const svgBlob = new Blob([svgStr], {type:'image/svg+xml'});
+  const svgUrl  = URL.createObjectURL(svgBlob);
+
+  await new Promise((res, rej) => {
+    const rugImg  = new Image();
+    rugImg.onload = () => {
+      // Slight perspective skew — wider at bottom to match room angle
+      ctx.save();
+      ctx.transform(1, -0.04, 0, 1, 0, rugY * 0.04); // subtle tilt
+      ctx.drawImage(rugImg, rugX, rugY, rugW, rugH);
+      ctx.restore();
+      URL.revokeObjectURL(svgUrl);
+      res();
+    };
+    rugImg.onerror = rej;
+    rugImg.src = svgUrl;
+  });
+
+  return canvas.toDataURL('image/png');
+}
+
+async function generateRugVisual() {
+  const ca = state.colorAssignment || {};
+  if (Object.keys(ca).length === 0) {
+    showAiError('Please assign colours to your pattern first.');
     return;
   }
 
-  // Show loading state
   setAiState('loading');
-  document.getElementById('ai-loading-title').textContent = 'Crafting your interior visualisation…';
-  document.getElementById('ai-loading-sub').textContent   = 'This takes about 15–20 seconds';
+  document.getElementById('ai-loading-title').textContent = 'Generating your living room…';
+  document.getElementById('ai-loading-sub').textContent   = 'AI room + accurate rug overlay — about 20 seconds';
 
   try {
+    // Step 1: Get room photo from server
     const response = await fetch(`${API_BASE}/api/generate-rug-visual`, {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        size:             sd.name,
-        dims:             sd.dims || `${state.customW} × ${state.customL} cm`,
-        shape:            sd.shape || 'rect',
-        texture:          texture,
-        pattern:          pattern,
-        colors:           cols,
-        colorAssignment:  state.colorAssignment,
-      }),
+      body:    JSON.stringify({ size: 'room', dims: '', shape: 'rect', texture: '', pattern: '', colors: [], colorAssignment: {} }),
     });
 
     if (!response.ok) {
@@ -724,16 +848,13 @@ async function generateRugVisual() {
     }
 
     const data = await response.json();
+    if (!data.image) throw new Error('No image returned from the server.');
 
-    if (!data.image) {
-      throw new Error('No image returned from the server.');
-    }
+    // Step 2: Composite accurate rug SVG over room photo in browser
+    document.getElementById('ai-loading-title').textContent = 'Placing your rug…';
+    const composited = await compositeRugOnRoom(data.image);
 
-    lastGeneratedImage = data.image;
-
-    // Show result
-    document.getElementById('ai-photo').src         = data.image;
-
+    lastGeneratedImage = composited;
     setAiState('result');
 
   } catch (err) {
@@ -742,11 +863,11 @@ async function generateRugVisual() {
   }
 }
 
-function setAiState(state) {
-  document.getElementById('ai-photo-placeholder').style.display = state === 'placeholder' ? 'block' : 'none';
-  document.getElementById('ai-loading').style.display            = state === 'loading'     ? 'block' : 'none';
-  document.getElementById('ai-result').style.display             = state === 'result'      ? 'block' : 'none';
-  document.getElementById('ai-error').style.display              = state === 'error'       ? 'block' : 'none';
+function setAiState(s) {
+  document.getElementById('ai-photo-placeholder').style.display = s === 'placeholder' ? 'block' : 'none';
+  document.getElementById('ai-loading').style.display            = s === 'loading'     ? 'block' : 'none';
+  document.getElementById('ai-result').style.display             = s === 'result'      ? 'block' : 'none';
+  document.getElementById('ai-error').style.display              = s === 'error'       ? 'block' : 'none';
 }
 
 function showAiError(msg) {
@@ -756,13 +877,12 @@ function showAiError(msg) {
 
 function savePhoto() {
   if (!lastGeneratedImage) return;
-  const a   = document.createElement('a');
-  a.href    = lastGeneratedImage;
+  const a    = document.createElement('a');
+  a.href     = lastGeneratedImage;
   a.download = 'andes-project-rug-visualisation.png';
   a.click();
 }
 
-// Reset AI state when user changes their config and goes back to preview
 function resetAiPreview() {
   lastGeneratedImage = null;
   setAiState('placeholder');
