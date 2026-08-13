@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v3.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -136,9 +137,7 @@ input[type=number]:focus,select:focus{border-color:var(--tostado)}
 .ai-loading-title{font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--charcoal);margin-bottom:0.3rem}
 .ai-loading-sub{font-size:0.75rem;color:#aaa}
 .ai-result img{max-height:520px;object-fit:cover}
-.ai-prompt-bar{padding:1rem 1.2rem;border-top:1px solid rgba(139,111,71,0.15);background:#FDFAF6}
-.ai-prompt-label{font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--tostado);margin-bottom:4px}
-.ai-prompt-text{font-size:0.78rem;color:#666;line-height:1.6;margin-bottom:0.8rem;font-style:italic}
+.ai-prompt-bar{padding:0.8rem 1.2rem;border-top:1px solid rgba(139,111,71,0.15);background:#FDFAF6}
 .ai-result-actions{display:flex;gap:8px}
 .btn-regen{padding:0.55rem 1rem;background:#fff;color:var(--charcoal);border:1px solid rgba(139,111,71,0.35);border-radius:3px;font-family:'Jost',sans-serif;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:all 0.2s}
 .btn-regen:hover{border-color:var(--tostado);color:var(--tostado)}
@@ -167,9 +166,8 @@ input[type=number]:focus,select:focus{border-color:var(--tostado)}
 
   <div class="steps-nav">
     <button class="step-tab active" onclick="goStep(0)"><span class="step-num">01</span>Size</button>
-    <button class="step-tab" onclick="goStep(1)"><span class="step-num">02</span>Design</button>
-    <button class="step-tab" onclick="goStep(2)"><span class="step-num">03</span>Colour</button>
-    <button class="step-tab" onclick="goStep(3)"><span class="step-num">04</span>Preview</button>
+    <button class="step-tab" onclick="goStep(1)"><span class="step-num">02</span>Design & Colour</button>
+    <button class="step-tab" onclick="goStep(2)"><span class="step-num">03</span>Preview</button>
   </div>
 
   <!-- STEP 1: SIZE -->
@@ -203,35 +201,25 @@ input[type=number]:focus,select:focus{border-color:var(--tostado)}
     <button class="btn-next" onclick="goStep(1)">Next — Choose Design →</button>
   </div>
 
-  <!-- STEP 2: DESIGN -->
+  <!-- STEP 2: DESIGN & COLOUR -->
   <div class="step-panel" id="panel-1">
     <div class="section-label">Texture</div>
     <div class="texture-grid" id="texture-grid"></div>
     <div class="section-label">Pattern</div>
     <div class="pattern-grid" id="pattern-grid"></div>
     <div id="colour-assign-wrap" style="display:none">
-      <div class="section-label">Assign colours to pattern</div>
+      <div class="section-label">Colours</div>
       <div class="colour-assign">
-        <div class="assign-title">Choose which colour goes where in your rug</div>
+        <div class="assign-title">Select a colour for each part of your pattern</div>
         <div id="assign-rows"></div>
       </div>
+      <div class="ai-suggestion" id="colour-ai"></div>
     </div>
-    <button class="btn-next" onclick="goStep(2)">Next — Choose Colours →</button>
+    <button class="btn-next" onclick="goStep(2)">Next — Preview &amp; Enquire →</button>
   </div>
 
-  <!-- STEP 3: COLOUR -->
+  <!-- STEP 3: PREVIEW -->
   <div class="step-panel" id="panel-2">
-    <div class="ai-suggestion" id="colour-ai"></div>
-    <div id="selected-colours-box" style="display:none" class="selected-colors">
-      <strong>Selected colours (up to 3)</strong>
-      <div class="chips" id="chips-list"></div>
-    </div>
-    <div id="palette-sections"></div>
-    <button class="btn-next" onclick="goStep(3)">Next — Preview &amp; Enquire →</button>
-  </div>
-
-  <!-- STEP 4: PREVIEW -->
-  <div class="step-panel" id="panel-3">
     <div class="section-label">Design summary</div>
     <div class="summary-card">
       <div class="summary-header">
@@ -245,7 +233,7 @@ input[type=number]:focus,select:focus{border-color:var(--tostado)}
             <div class="summary-key">Estimated price (AUD)</div>
             <div class="price-est" id="price-display">—</div>
           </div>
-          <div class="price-note">Final quote confirmed by The Andes Project.</div>
+          <div class="price-note">Final quote confirmed by The Andes Project. Shipping not included.</div>
         </div>
       </div>
     </div>
@@ -271,8 +259,6 @@ input[type=number]:focus,select:focus{border-color:var(--tostado)}
       <div class="ai-result" id="ai-result" style="display:none">
         <img id="ai-photo" src="" alt="AI-generated photorealistic rug visualisation" style="width:100%;border-radius:6px 6px 0 0;display:block">
         <div class="ai-prompt-bar">
-          <div class="ai-prompt-label">Claude's prompt</div>
-          <div class="ai-prompt-text" id="ai-prompt-text"></div>
           <div class="ai-result-actions">
             <button class="btn-regen" onclick="generateRugVisual()">↺ Regenerate</button>
             <button class="btn-save-photo" onclick="savePhoto()">⬇ Save Photo</button>
@@ -293,7 +279,9 @@ input[type=number]:focus,select:focus{border-color:var(--tostado)}
 </div>
 
 <script>
-const RATE = 600;
+const RATE_STANDARD = 600;
+const RATE_POMPOM   = 750;
+const RATE_CUTPILE  = 800;
 
 const SIZES = [
   {id:'mini',   name:'Mini',       dims:'60 × 90 cm',   w:60,  l:90,  m2:0.54, popular:false},
@@ -356,15 +344,15 @@ let state = {
   colorAssignment: {}
 };
 
-function calcPrice(m2) { return Math.round(m2 * RATE); }
+function calcPrice(m2) { const rate = state.texture === 'pompom' ? RATE_POMPOM : state.texture === 'cutpile' ? RATE_CUTPILE : RATE_STANDARD; return Math.round(m2 * rate); }
 
 function goStep(n) {
   const prev = [...document.querySelectorAll('.step-panel')].findIndex(p => p.classList.contains('active'));
   document.querySelectorAll('.step-panel').forEach((p,i) => p.classList.toggle('active', i===n));
   document.querySelectorAll('.step-tab').forEach((t,i) => t.classList.toggle('active', i===n));
-  if (n === 3) { renderSummary(); }
+  if (n === 2) { renderSummary(); }
   // If user goes back from preview, reset AI so stale image isn't shown for new config
-  if (prev === 3 && n !== 3 && typeof resetAiPreview === 'function') resetAiPreview();
+  if (prev === 2 && n !== 2 && typeof resetAiPreview === 'function') resetAiPreview();
 }
 
 function buildSizeGrid() {
@@ -441,7 +429,7 @@ function textureIcon(id) {
   return `<svg class="texture-icon" viewBox="0 0 60 40"><rect width="60" height="40" fill="#8B6F47" rx="3"/><rect width="60" height="40" fill="url(#pile)" rx="3"/><defs><pattern id="pile" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="2.5" fill="#C9B08A" opacity="0.5"/></pattern></defs></svg>`;
 }
 
-function selectTexture(id) { state.texture = id; buildTextureGrid(); }
+function selectTexture(id) { state.texture = id; state.colorAssignment = {}; buildTextureGrid(); buildSizeGrid(); buildColourAssign(); }
 
 function buildPatternGrid() {
   const g = document.getElementById('pattern-grid');
@@ -453,9 +441,15 @@ function buildPatternGrid() {
 }
 
 function patternSVG(id) {
-  const c1 = state.colors[0] ? COLORS.find(x=>x.id===state.colors[0])?.hex||'#D4C4A0' : '#D4C4A0';
-  const c2 = state.colors[1] ? COLORS.find(x=>x.id===state.colors[1])?.hex||'#8B6F47' : '#8B6F47';
-  const c3 = state.colors[2] ? COLORS.find(x=>x.id===state.colors[2])?.hex||'#2C2C2A' : '#2C2C2A';
+  // Derive preview colours from assignment slots
+  const _ca = state.colorAssignment;
+  const _slots = ['bg','alt','top','bot','circle'];
+  const _assigned = _slots.map(k => COLORS.find(x=>x.id===_ca[k])).filter(Boolean);
+  const _fallback = COLORS.filter(c=>['c01','c14','c07'].includes(c.id));
+  const _pool = _assigned.length ? _assigned : _fallback;
+  const c1 = _pool[0]?.hex || '#D4C4A0';
+  const c2 = _pool[1]?.hex || '#8B6F47';
+  const c3 = _pool[2]?.hex || '#2C2C2A';
   const W=80, H=50;
   if (id==='plain')     return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="${c1}"/></svg>`;
   if (id==='stripes-h') return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="${c1}"/><rect y="10" width="${W}" height="10" fill="${c2}"/><rect y="30" width="${W}" height="10" fill="${c2}"/></svg>`;
@@ -467,7 +461,7 @@ function patternSVG(id) {
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="${c1}"/><text x="40" y="30" text-anchor="middle" font-size="11" fill="${c2}" font-family="serif">Custom</text></svg>`;
 }
 
-function selectPattern(id) { state.pattern = id; buildPatternGrid(); buildColourAssign(); }
+function selectPattern(id) { state.pattern = id; state.colorAssignment = {}; buildPatternGrid(); buildColourAssign(); }
 
 // Pattern slot definitions — what each slot means for each pattern
 const PATTERN_SLOTS = {
@@ -480,17 +474,19 @@ const PATTERN_SLOTS = {
 };
 
 function buildColourAssign() {
-  const slots = PATTERN_SLOTS[state.pattern] || [];
+  const baseSlots = PATTERN_SLOTS[state.pattern] || [];
+  // Add pom pom colour slot when pom pom texture is selected
+  const pompomSlot = state.texture === 'pompom' ? [{key:'pompom', label:'Pom Pom colour'}] : [];
+  const slots = [...baseSlots, ...pompomSlot];
   const wrap  = document.getElementById('colour-assign-wrap');
   const rows  = document.getElementById('assign-rows');
 
   if (slots.length === 0) { wrap.style.display='none'; return; }
   wrap.style.display = 'block';
 
-  // Build colour options from selected colours — fall back to full palette if <2 selected
-  const pool = state.colors.length >= 1
-    ? state.colors.map(id => COLORS.find(c=>c.id===id)).filter(Boolean)
-    : COLORS;
+  // Default pool: Natural, Sand, Camel as sensible starting defaults
+  const defaultPool = ['c01','c14','c07'].map(id=>COLORS.find(c=>c.id===id)).filter(Boolean);
+  const pool = defaultPool;
 
   rows.innerHTML = slots.map((slot, i) => {
     const defaultColor = pool[i % pool.length];
@@ -500,7 +496,7 @@ function buildColourAssign() {
       <div class="assign-swatch" id="swatch-${slot.key}" style="background:${currentColor?.hex||'#ccc'}"></div>
       <div class="assign-label">${slot.label}</div>
       <select class="assign-select" onchange="setAssignment('${slot.key}', this.value)">
-        ${COLORS.map(c=>`<option value="${c.id}"${c.id===currentId?' selected':''}>#${c.num} ${c.name}</option>`).join('')}
+        ${COLORS.map(c=>`<option value="${c.id}"${c.id===currentId?' selected':''}>${c.num} · ${c.name}</option>`).join('')}
       </select>
     </div>`;
   }).join('');
@@ -518,9 +514,11 @@ function setAssignment(key, colorId) {
   const c = COLORS.find(x=>x.id===colorId);
   const sw = document.getElementById('swatch-'+key);
   if (sw && c) sw.style.background = c.hex;
+  updateColorAI();
 }
 
-function buildColorPalette() {
+function buildColorPalette() { /* removed — colours selected via assign dropdowns */
+  updateColorAI(); return;
   const groups = [...new Set(COLORS.map(c => c.group))];
   const container = document.getElementById('palette-sections');
   container.innerHTML = groups.map(g => {
@@ -541,28 +539,25 @@ function buildColorPalette() {
   renderChips();
 }
 
-function toggleColor(id) {
-  if (state.colors.includes(id)) { state.colors = state.colors.filter(x => x !== id); }
-  else if (state.colors.length < 3) { state.colors.push(id); }
-  buildColorPalette();
-  buildPatternGrid();
-  buildColourAssign();
-}
+function toggleColor(id) { /* removed — colours selected via assign dropdowns */ }
 
 function updateColorAI() {
   const ai = document.getElementById('colour-ai');
-  const ids = state.colors.map(id => COLORS.find(c=>c.id===id)?.name||id).join(', ');
+  if (!ai) return;
+  // Derive colour names from current assignment
+  const assignedIds = [...new Set(Object.values(state.colorAssignment))].filter(Boolean);
+  const ids = assignedIds.map(id => COLORS.find(c=>c.id===id)?.name||id).join(', ');
   let suggestion = '';
-  const hasWarm    = state.colors.some(id => ['c06','c07','c15','c151','c20','c05'].includes(id));
-  const hasCool    = state.colors.some(id => ['c08','c09','c10','c18','c19'].includes(id));
-  const hasNeutral = state.colors.some(id => ['c01','c14','c07','c11','c12','c13'].includes(id));
-  if (state.colors.length === 0) {
-    suggestion = 'Select up to 3 natural dye colours. All colours are extracted from flowers, tree bark and native plants of Argentina.';
+  const hasWarm    = assignedIds.some(id => ['c06','c07','c15','c151','c20','c05'].includes(id));
+  const hasCool    = assignedIds.some(id => ['c08','c09','c10','c18','c19'].includes(id));
+  const hasNeutral = assignedIds.some(id => ['c01','c14','c07','c11','c12','c13'].includes(id));
+  if (assignedIds.length === 0) {
+    suggestion = 'Choose a pattern above, then assign colours to each part of your rug.';
   } else if (hasWarm && hasNeutral) {
     suggestion = `${ids} — a warm earthy combination that evokes the Argentine landscape. Pairs beautifully with timber floors and natural linen furniture.`;
   } else if (hasCool && hasNeutral) {
     suggestion = `${ids} — a serene palette inspired by the Andean highlands. Ideal with light oak flooring and white or grey interiors.`;
-  } else if (state.colors.includes('c17') && hasNeutral) {
+  } else if (assignedIds.includes('c17') && hasNeutral) {
     suggestion = `${ids} — the classic Andes contrast palette. Bold definition meets natural warmth — works in both contemporary and traditional interiors.`;
   } else {
     suggestion = `${ids} — a distinctive combination. Our artisans can also mix custom shades to match your exact interior palette. Mention this in your enquiry.`;
@@ -570,20 +565,12 @@ function updateColorAI() {
   ai.innerHTML = `<strong>&#10022; AI colour suggestion</strong>${suggestion}`;
 }
 
-function renderChips() {
-  const box  = document.getElementById('selected-colours-box');
-  const list = document.getElementById('chips-list');
-  box.style.display = state.colors.length ? 'block' : 'none';
-  list.innerHTML = state.colors.map(id => {
-    const c = COLORS.find(x => x.id === id);
-    if (!c) return '';
-    return `<div class="chip"><div class="chip-dot" style="background:${c.hex}"></div><span class="chip-num">#${c.num}</span> ${c.name}<span class="chip-x" onclick="toggleColor('${id}')">&times;</span></div>`;
-  }).join('');
-}
+function renderChips() { /* removed — replaced by assign-rows */ }
 
 function renderSummary() {
   const sd      = getSizeData();
-  const cols    = state.colors.map(id => COLORS.find(c=>c.id===id)?.name||id);
+  const _aIds  = [...new Set(Object.values(state.colorAssignment))].filter(Boolean);
+  const cols    = _aIds.map(id => COLORS.find(c=>c.id===id)?.name||id);
   const texture = TEXTURES.find(t => t.id===state.texture)?.name || 'Plain';
   const pattern = PATTERNS.find(p => p.id===state.pattern)?.name || 'Custom';
   const dimStr  = state.customActive && state.customW && state.customL
@@ -612,7 +599,8 @@ function renderSummary() {
 
 function doEnquire() {
   const sd      = getSizeData();
-  const cols    = state.colors.map(id => COLORS.find(c=>c.id===id)?.name||id);
+  const _eIds  = [...new Set(Object.values(state.colorAssignment))].filter(Boolean);
+  const cols    = _eIds.map(id => COLORS.find(c=>c.id===id)?.name||id);
   const texture = TEXTURES.find(t => t.id===state.texture)?.name || 'Plain';
   const pattern = PATTERNS.find(p => p.id===state.pattern)?.name || 'Custom';
   const dimStr  = state.customActive && state.customW && state.customL
@@ -649,7 +637,8 @@ Thank you!`
 
 function doDownload() {
   const sd      = getSizeData();
-  const cols    = state.colors.map(id => COLORS.find(c=>c.id===id)).filter(Boolean);
+  const _dlIds = [...new Set(Object.values(state.colorAssignment))].filter(Boolean);
+  const cols    = _dlIds.map(id => COLORS.find(c=>c.id===id)).filter(Boolean);
   const c1 = cols[0]?.hex || '#D4C4A0';
   const c2 = cols[1]?.hex || '#8B6F47';
   const c3 = cols[2]?.hex || '#2C2C2A';
@@ -699,7 +688,8 @@ let lastGeneratedImage = null;
 
 async function generateRugVisual() {
   const sd      = getSizeData();
-  const cols    = state.colors.map(id => COLORS.find(c => c.id === id)?.name || id);
+  const _dIds  = [...new Set(Object.values(state.colorAssignment))].filter(Boolean);
+  const cols    = _dIds.map(id => COLORS.find(c => c.id === id)?.name || id);
   const texture = TEXTURES.find(t => t.id === state.texture)?.name || 'Plain';
   const pattern = PATTERNS.find(p => p.id === state.pattern)?.name || 'Custom';
 
@@ -782,7 +772,6 @@ function resetAiPreview() {
 buildSizeGrid();
 buildTextureGrid();
 buildPatternGrid();
-buildColorPalette();
 buildColourAssign();
 </script>
 </body>
